@@ -68,7 +68,7 @@ function tokenInfos(){
 
     $uri = $("{0}/user" -f @($github_api))  
 
-    $headers = $(makeAPIreq -method "Get" -uri $uri -debug $true -ret_headers $true)
+    $headers = $(makeAPIreq -method "Get" -uri $uri -ret_headers $true)
 
     return @{ 
         "OAuth-Scopes"          = $headers["X-OAuth-Scopes"]; 
