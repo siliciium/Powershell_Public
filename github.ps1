@@ -4,7 +4,6 @@
 
     # In vscode terminal
     ──(user@linux)-[~] cd your_git_project_folder
-
     ──(user@linux)-[~] export GIT_TRACE=1
     ──(user@linux)-[~] export GIT_TRACE_PACKET=1
     ──(user@linux)-[~] git pull -v
