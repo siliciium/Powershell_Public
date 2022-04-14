@@ -25,6 +25,9 @@ function AuthorizationGrantFlow(){
 
     <#
         https://dev.twitch.tv/docs/authentication/getting-tokens-oauth#authorization-code-grant-flow
+        
+        Type: User access tokens
+      
         This Auth flow also return refresh_token
     #>
 
