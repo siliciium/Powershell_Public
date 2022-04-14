@@ -2,7 +2,7 @@
     If you work with Visual Studio Code on Linux and you are 
     already connected to github , you can get your token with :
 
-    # Get git extension askpass file path, in visual studio terminal
+    # In vscode terminal
     ──(user@linux)-[~] cd your_git_project_folder
 
     ──(user@linux)-[~] export GIT_TRACE=1
@@ -50,9 +50,7 @@ function makeAPIreq($method, $uri, $body=$null, $ret_headers=$false){
             return @($r.Headers)
         }else{
             return $($r.Content | ConvertFrom-Json)
-        }
-
-        
+        }        
     }catch{
         Write-Host -ForegroundColor Red $_
     }
