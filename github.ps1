@@ -2,13 +2,14 @@
     If you work with Visual Studio Code on Linux and you are 
     already connected to github , you can get your token with :
 
-    # Get git extension askpass file path
+    # Get git extension askpass file path, in visual studio terminal
+    ──(user@linux)-[~] cd your_git_project_folder
+
     ──(user@linux)-[~] export GIT_TRACE=1
     ──(user@linux)-[~] export GIT_TRACE_PACKET=1
-
-    #! In visual studio terminal :
-    ──(user@linux)-[~] cd your_git_project_folder
-    ──(user@linux)-[~] cp /usr/share/code/resources/app/extensions/git/dist/askpass.sh askpass.sh
+    ──(user@linux)-[~] git pull -v
+    ASKPASS_PATH
+    ──(user@linux)-[~] cp ASKPASS_PATH askpass.sh
     ──(user@linux)-[~] bash askpass.sh 'Username for '\''https://github.com'\'': ' 
     A_NUMBER
     ──(user@linux)-[~] bash askpass.sh 'Password for '\''https://A_NUMBER@github.com'\'': '
