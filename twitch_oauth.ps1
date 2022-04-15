@@ -53,11 +53,11 @@ function AuthorizationGrantFlow(){
 
     $uri = $("https://id.twitch.tv/oauth2/authorize?{0}" -f @($sparams));
 
-    Write-Host -ForegroundColor Yellow $("- Copier/Coller cette URL dans un navigateur WEB :{0}" -f @([System.Environment]::NewLine));
+    Write-Host -ForegroundColor Yellow $("- Copy/Paste this URL in a WEB browser :{0}" -f @([System.Environment]::NewLine));
     Write-Host -ForegroundColor Yellow $("{0}{1}" -f @($uri, [System.Environment]::NewLine));
 
     while ($true){
-        Write-Host -NoNewline -ForegroundColor Yellow "Veuillez entrer le code obtenu > "
+        Write-Host -NoNewline -ForegroundColor Yellow "Please enter the code obtained > "
         $code = Read-Host
         if(-not [string]::IsNullOrEmpty($code)){
             if($code.Length -eq 30){
@@ -226,7 +226,7 @@ function SaveToJson($token, $check_exists=$true){
         if([System.IO.File]::Exists($config.creds_file)){
 
             while ($true){
-                Write-Host -NoNewline -ForegroundColor Yellow $("Le fichier {0} existe déjà, voulez-vous le remplacer [y/n] > " -f @($config.creds_file))
+                Write-Host -NoNewline -ForegroundColor Yellow $("The file {0} already exists, do you want to replace it [y/n] > " -f @($config.creds_file))
                 $choice = Read-Host
                 if(-not [string]::IsNullOrEmpty($choice)){
                     if([string]::Equals($choice, "y")){
@@ -255,7 +255,7 @@ function ReadJsonToken(){
     if([System.IO.File]::Exists($config.creds_file)){
         return $(Get-Content -Path $config.creds_file -Encoding UTF8 | ConvertFrom-Json)
     }else{
-        Write-Host -ForegroundColor Red $("{0} n'existe pas." -f @($config.creds_file))
+        Write-Host -ForegroundColor Red $("{0} does not exist." -f @($config.creds_file))
     }
 
     return $null
