@@ -22,11 +22,17 @@ $global:debug                = $true
 $global:fileformat           = "excel" #json or excel
 
 function toExcel($debug=$false){
-    #Get-Process -Name "EXCEL" | ForEach-Object{ Stop-Process -Id $_.Id -Confirm:$false -PassThru }
+
+    $excelPidsBefore = @(
+        Get-Process -ErrorAction Ignore EXCEL | Select-Object -ExpandProperty Id
+    )
+
 
     $excel = New-Object -ComObject excel.application
     $excel.visible = $false
     $excel.DisplayAlerts = $false;
+
+    $excelComPid = Compare-Object -PassThru $excelPidsBefore (Get-Process -ErrorAction Ignore EXCEL).Id
 
     if([System.IO.File]::Exists($out_XLSX)){
         $workbook = $Excel.Workbooks.Open($out_XLSX)
@@ -102,6 +108,8 @@ function toExcel($debug=$false){
     $workbook.SaveAs($out_XLSX)
     $workbook.Close($false)
     $excel.Quit()
+
+    Stop-Process -Id $excelComPid -Confirm:$false -PassThru
 
     Remove-Variable -Name excel
 }
@@ -311,3 +319,11 @@ function Main(){
     }
 }
 Main
+
+
+
+
+
+
+
+
