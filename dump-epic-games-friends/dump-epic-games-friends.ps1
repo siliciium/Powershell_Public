@@ -109,7 +109,7 @@ function toExcel($debug=$false){
     $workbook.Close($false)
     $excel.Quit()
 
-    Stop-Process -Id $excelComPid -Confirm:$false -PassThru
+    Stop-Process -Id $excelComPid -Confirm:$false -PassThru | Out-Null
 
     Remove-Variable -Name excel
 }
