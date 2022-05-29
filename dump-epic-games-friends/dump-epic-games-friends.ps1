@@ -73,14 +73,12 @@ function toExcel($debug=$false){
                 Write-Host -ForegroundColor DarkBlue $("[EXCEL][INSERT][{0}] {1}:{2}" -f@($last_index, $epic.epicid, $epic.epicname))            
             }
 
-            try{
             $Data.Cells.Item($last_index,1) = $epic.epicid
             $Data.Cells.Item($last_index,2) = $epic.epicname
             $Data.Cells.Item($last_index,3) = $epic.xbox
             $Data.Cells.Item($last_index,4) = $epic.playstation
             $Data.Cells.Item($last_index,5) = $epic.steam
             $Data.Cells.Item($last_index,6) = $epic.nintendo
-            }catch{}
         }
 
     }
@@ -95,7 +93,7 @@ function toExcel($debug=$false){
     [System.GC]::Collect()
     [System.GC]::WaitForPendingFinalizers()
 
-    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($workSheet)
+    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($workbook.Worksheets)
     [System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel)
 
     Remove-Variable -Name excel
@@ -116,29 +114,95 @@ function Main(){
                 Start-Sleep -Seconds 30
                 continue;
             } 
-                        
-
+            
+            $already_proc = $false;
+            
             Get-Content -Path $filePath -Encoding UTF8 | ForEach-Object {
-                
-                $_matches0 = [regex]::match($_, "LogWebView: UPDATE (.*)$")        
 
-                if($_matches0.Length -gt 0){
+                    if(-not $already_proc){
                     
-                    $global:matches_availables = $true;
+                    $_matches0 = [regex]::match($_, "LogWebView: UPDATE (.*)$")        
 
-                    if($_matches0.Groups[0].Value -match 'friends' ){
+                    if($_matches0.Length -gt 0){
+                        
+                        $global:matches_availables = $true;
 
-                        $global:friends_availables = $true;                    
+                        if($_matches0.Groups[0].Value -match 'friends' ){
 
-                        $json = $_matches0.Groups[0].Value.Replace('LogWebView: UPDATE ', '') | ConvertFrom-Json            
+                            $global:friends_availables = $true;                    
 
-                        if(($json.PSobject.Properties.name -match "collection")){
+                            $json = $_matches0.Groups[0].Value.Replace('LogWebView: UPDATE ', '') | ConvertFrom-Json            
 
-                            $global:collection_available = $true
+                            if(($json.PSobject.Properties.name -match "collection")){
 
-                            if(($json.PSobject.Properties.name -match "add")){
+                                $global:collection_available = $true
 
-                                foreach($epicuser in $json.add){
+                                if(($json.PSobject.Properties.name -match "add")){
+
+                                    $already_proc = $true;
+
+                                    foreach($epicuser in $json.add){                        
+
+                                        $epic = @{
+                                            "epicid" = "";
+                                            "epicname" = "";
+                                            "xbox" = "";
+                                            "playstation" = "";
+                                            "steam" = "";
+                                            "nintendo" = "";
+                                        }
+
+                                        $epic.epicid = $epicuser.id
+
+                                        $display_name = $epicuser.value.displayName;
+                                        if(-not [string]::IsNullOrEmpty($display_name)){
+                                            $epic.epicname = $display_name
+                                        }                                    
+
+                                        $global:datas_written = $true
+                                        if($epicuser.value.externalAuths.Count -gt 0){
+                                            foreach($externalauths in $epicuser.value.externalAuths){
+
+                                                $ex_type = $externalauths.type;
+                                                $ex_name = $externalauths.displayName; 
+
+                                                switch ($ex_type) {
+                                                    'xbl' { $epic.xbox = $ex_name }
+                                                    'psn' { $epic.playstation = $ex_name }
+                                                    'steam' { $epic.steam = $ex_name }
+                                                    'nintendo' { $epic.nintendo = $ex_name }
+                                                    Default {}
+                                                }                                                                                                                        
+
+                                            }                                        
+                                            
+                                        }
+
+                                        $global:EPICS += $epic
+                                        
+                                    }
+                                    
+                                }
+                            }
+                        }
+                    }else{
+                        $_matches0 = [regex]::match($_, "LogWebView: \[Social User\] Friends Updated: Added (.*)$")
+
+                        if($_matches0.Length -gt 0){
+
+                            $global:matches_availables = $true;
+
+                            if($_matches0.Groups[0].Value -match 'friends' ){
+
+                                $global:friends_availables = $true;  
+                                $global:collection_available = $true                  
+
+                                $json = $_matches0.Groups[0].Value.Replace('LogWebView: [Social User] Friends Updated: Added ', '')  
+                                $json = "{ `"friends`" :"  + $json + "}" | ConvertFrom-Json
+
+                                $already_proc = $true;
+
+                                foreach($epicuser in $json.friends){                                
 
                                     $epic = @{
                                         "epicid" = "";
@@ -149,16 +213,15 @@ function Main(){
                                         "nintendo" = "";
                                     }
 
-                                    $epic.epicid = $epicuser.id
+                                    $epic.epicid = $epicuser.payload[0].entity.id
 
-                                    $display_name = $epicuser.value.displayName;
+                                    $display_name = $epicuser.payload[0].entity.displayName;
                                     if(-not [string]::IsNullOrEmpty($display_name)){
                                         $epic.epicname = $display_name
                                     }                                    
 
-                                    $global:datas_written = $true
-                                    if($epicuser.value.externalAuths.Count -gt 0){
-                                        foreach($externalauths in $epicuser.value.externalAuths){
+                                    if($epicuser.payload[0].entity.externalAuths.Count -gt 0){
+                                        foreach($externalauths in $epicuser.payload[0].entity.externalAuths){
 
                                             $ex_type = $externalauths.type;
                                             $ex_name = $externalauths.displayName; 
@@ -169,77 +232,21 @@ function Main(){
                                                 'steam' { $epic.steam = $ex_name }
                                                 'nintendo' { $epic.nintendo = $ex_name }
                                                 Default {}
-                                            }                                                                                                                        
+                                            }                                                                                                                    
 
-                                        }
-
-                                        $global:EPICS += $epic
-
-                                    }
-                                    
-                                }
-                                
-                            }
-                        }
-                    }
-                }else{
-                    $_matches0 = [regex]::match($_, "LogWebView: \[Social User\] Friends Updated: Added (.*)$")
-
-                    if($_matches0.Length -gt 0){
-
-                        $global:matches_availables = $true;
-
-                        if($_matches0.Groups[0].Value -match 'friends' ){
-
-                            $global:friends_availables = $true;  
-                            $global:collection_available = $true                  
-
-                            $json = $_matches0.Groups[0].Value.Replace('LogWebView: [Social User] Friends Updated: Added ', '')  
-                            $json = "{ `"friends`" :"  + $json + "}" | ConvertFrom-Json
-
-                            foreach($epicuser in $json.friends){                                
-
-                                $epic = @{
-                                    "epicid" = "";
-                                    "epicname" = "";
-                                    "xbox" = "";
-                                    "playstation" = "";
-                                    "steam" = "";
-                                    "nintendo" = "";
-                                }
-
-                                $epic.epicid = $epicuser.payload[0].entity.id
-
-                                $display_name = $epicuser.payload[0].entity.displayName;
-                                if(-not [string]::IsNullOrEmpty($display_name)){
-                                    $epic.epicname = $display_name
-                                }                                    
-
-                                if($epicuser.payload[0].entity.externalAuths.Count -gt 0){
-                                    foreach($externalauths in $epicuser.payload[0].entity.externalAuths){
-
-                                        $ex_type = $externalauths.type;
-                                        $ex_name = $externalauths.displayName; 
-
-                                        switch ($ex_type) {
-                                            'xbl' { $epic.xbox = $ex_name }
-                                            'psn' { $epic.playstation = $ex_name }
-                                            'steam' { $epic.steam = $ex_name }
-                                            'nintendo' { $epic.nintendo = $ex_name }
-                                            Default {}
-                                        }                                                                                                                    
+                                        }                                    
 
                                     }
 
                                     $global:EPICS += $epic
-
+                                    
                                 }
-                                
-                            }
 
+                            }
+                        
                         }
-                    
                     }
+
                 }
             }
 
@@ -258,10 +265,12 @@ function Main(){
                     $already_proc = @()
                     foreach($epic in $global:EPICS){    
                         if(-not $already_proc.Contains($epic.epicid)){
-                            Write-Host -ForegroundColor Blue $("{0} : {1}" -f @($epic.epicid, $epic.epicname))
+                            Write-Host -ForegroundColor Blue $("{0} : {1} : {2} : {3} : {4}" -f @($epic.epicid, $epic.epicname, $epic.playstation, $epic.xbox, $epic.steam))
                         }
                         $already_proc += $epic.epicid
                     }
+
+                    Write-Host "Nombre d'amis :$($already_proc.Count)"
                 }
                 
                 if([string]::Equals($global:fileformat, 'json')){
