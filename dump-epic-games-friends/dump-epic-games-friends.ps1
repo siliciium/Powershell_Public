@@ -1,15 +1,23 @@
 Clear-Host
 
+#
+# Epic Launcher Log file must contain : 
+# LogWebView: UPDATE 
+# or
+# LogWebView: [Social User] Friends Updated: Added
+
+
 $filePath = $("{0}\EpicGamesLauncher\Saved\Logs\EpicGamesLauncher.log" -f @($env:LOCALAPPDATA));
 $out_JSON  = $("C:\Users\{0}\Desktop\EpicList.json" -f @($env:USERNAME));
 $out_XLSX = $("C:\Users\{0}\Desktop\EpicList.xlsx" -f @($env:USERNAME));
+
 
 $global:matches_availables   = $false
 $global:friends_availables   = $false
 $global:collection_available = $false
 $global:datas_written        = $false
 $global:EPICS                = @()
-$global:debug                = $false
+$global:debug                = $true
 $global:fileformat           = "excel" #json or excel
 
 function toExcel($debug=$false){
@@ -38,8 +46,6 @@ function toExcel($debug=$false){
         
     }
 
-    #Write-Host "NUM OF ROWS : $($Data.UsedRange.Rows.Count)"    
-
     foreach($epic in $global:EPICS){
 
         $index = -1;
@@ -62,17 +68,19 @@ function toExcel($debug=$false){
             $Data.Cells.Item($index,6) = $epic.nintendo
         }else{
             # INSERT NEW
-            if($debug){
-                Write-Host -ForegroundColor DarkBlue $("[EXCEL][INSERT] {0}:{1}" -f@($epic.epicid, $epic.epicname))            
-            }
             $last_index = $Data.UsedRange.Rows.Count + 1
+            if($debug){
+                Write-Host -ForegroundColor DarkBlue $("[EXCEL][INSERT][{0}] {1}:{2}" -f@($last_index, $epic.epicid, $epic.epicname))            
+            }
 
+            try{
             $Data.Cells.Item($last_index,1) = $epic.epicid
             $Data.Cells.Item($last_index,2) = $epic.epicname
             $Data.Cells.Item($last_index,3) = $epic.xbox
             $Data.Cells.Item($last_index,4) = $epic.playstation
             $Data.Cells.Item($last_index,5) = $epic.steam
             $Data.Cells.Item($last_index,6) = $epic.nintendo
+            }catch{}
         }
 
     }
@@ -81,7 +89,16 @@ function toExcel($debug=$false){
     $usedRange = $Data.UsedRange                                                                                              
     $usedRange.EntireColumn.AutoFit() | Out-Null
     $workbook.SaveAs($out_XLSX)
+    $workbook.Close($false)
     $excel.Quit()
+
+    [System.GC]::Collect()
+    [System.GC]::WaitForPendingFinalizers()
+
+    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($workSheet)
+    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel)
+
+    Remove-Variable -Name excel
 }
 
 function Main(){
@@ -96,9 +113,10 @@ function Main(){
             $launcher_pid = $(Get-Process -Name "EpicGamesLauncher" -ErrorAction SilentlyContinue).id;
             if([string]::IsNullOrEmpty($launcher_pid)){
                 write-host -ForegroundColor Yellow "WARNING ! Epic Game launcher must be opened, next check in 30 secs..."
-                Start-Sleep -Seconds 30
-                continue;
-            }        
+                #Start-Sleep -Seconds 30
+                #continue;
+            } 
+                        
 
             Get-Content -Path $filePath -Encoding UTF8 | ForEach-Object {
                 
@@ -151,11 +169,11 @@ function Main(){
                                                 'steam' { $epic.steam = $ex_name }
                                                 'nintendo' { $epic.nintendo = $ex_name }
                                                 Default {}
-                                            }                                                                            
-
-                                            $global:EPICS += $epic
+                                            }                                                                                                                        
 
                                         }
+
+                                        $global:EPICS += $epic
 
                                     }
                                     
@@ -163,6 +181,64 @@ function Main(){
                                 
                             }
                         }
+                    }
+                }else{
+                    $_matches0 = [regex]::match($_, "LogWebView: \[Social User\] Friends Updated: Added (.*)$")
+
+                    if($_matches0.Length -gt 0){
+
+                        $global:matches_availables = $true;
+
+                        if($_matches0.Groups[0].Value -match 'friends' ){
+
+                            $global:friends_availables = $true;  
+                            $global:collection_available = $true                  
+
+                            $json = $_matches0.Groups[0].Value.Replace('LogWebView: [Social User] Friends Updated: Added ', '')  
+                            $json = "{ `"friends`" :"  + $json + "}" | ConvertFrom-Json
+
+                            foreach($epicuser in $json.friends){                                
+
+                                $epic = @{
+                                    "epicid" = "";
+                                    "epicname" = "";
+                                    "xbox" = "";
+                                    "playstation" = "";
+                                    "steam" = "";
+                                    "nintendo" = "";
+                                }
+
+                                $epic.epicid = $epicuser.payload[0].entity.id
+
+                                $display_name = $epicuser.payload[0].entity.displayName;
+                                if(-not [string]::IsNullOrEmpty($display_name)){
+                                    $epic.epicname = $display_name
+                                }                                    
+
+                                if($epicuser.payload[0].entity.externalAuths.Count -gt 0){
+                                    foreach($externalauths in $epicuser.payload[0].entity.externalAuths){
+
+                                        $ex_type = $externalauths.type;
+                                        $ex_name = $externalauths.displayName; 
+
+                                        switch ($ex_type) {
+                                            'xbl' { $epic.xbox = $ex_name }
+                                            'psn' { $epic.playstation = $ex_name }
+                                            'steam' { $epic.steam = $ex_name }
+                                            'nintendo' { $epic.nintendo = $ex_name }
+                                            Default {}
+                                        }                                                                                                                    
+
+                                    }
+
+                                    $global:EPICS += $epic
+
+                                }
+                                
+                            }
+
+                        }
+                    
                     }
                 }
             }
@@ -180,7 +256,7 @@ function Main(){
 
                 if($global:EPICS.Count -gt 0){
                     $already_proc = @()
-                    foreach($epic in $global:EPICS){      
+                    foreach($epic in $global:EPICS){    
                         if(-not $already_proc.Contains($epic.epicid)){
                             Write-Host -ForegroundColor Blue $("{0} : {1}" -f @($epic.epicid, $epic.epicname))
                         }
