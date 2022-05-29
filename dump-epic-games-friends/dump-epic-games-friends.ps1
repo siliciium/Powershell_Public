@@ -113,8 +113,8 @@ function Main(){
             $launcher_pid = $(Get-Process -Name "EpicGamesLauncher" -ErrorAction SilentlyContinue).id;
             if([string]::IsNullOrEmpty($launcher_pid)){
                 write-host -ForegroundColor Yellow "WARNING ! Epic Game launcher must be opened, next check in 30 secs..."
-                #Start-Sleep -Seconds 30
-                #continue;
+                Start-Sleep -Seconds 30
+                continue;
             } 
                         
 
