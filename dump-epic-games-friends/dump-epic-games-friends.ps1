@@ -5,6 +5,7 @@ Clear-Host
 # LogWebView: UPDATE 
 # or
 # LogWebView: [Social User] Friends Updated: Added
+#
 
 
 $filePath = $("{0}\EpicGamesLauncher\Saved\Logs\EpicGamesLauncher.log" -f @($env:LOCALAPPDATA));
@@ -21,6 +22,8 @@ $global:debug                = $true
 $global:fileformat           = "excel" #json or excel
 
 function toExcel($debug=$false){
+    #Get-Process -Name "EXCEL" | ForEach-Object{ Stop-Process -Id $_.Id -Confirm:$false -PassThru }
+
     $excel = New-Object -ComObject excel.application
     $excel.visible = $false
     $excel.DisplayAlerts = $false;
@@ -32,7 +35,7 @@ function toExcel($debug=$false){
         $workbook = $excel.Workbooks.Add() 
         $workbook.Worksheets.Add() | Out-Null
         $Data= $workbook.Worksheets.Item(1)
-        $Data.Name = 'MySpreadsheet'
+        $Data.Name = 'EpicGames'
         $Data.Cells.Item(1,1) = 'EpicId'
         $Data.Cells.Item(1,2) = 'EpicName'
         $Data.Cells.Item(1,3) = 'Xbox'
@@ -59,7 +62,11 @@ function toExcel($debug=$false){
         if($index -ne -1){
             # UPDATE EXISTING
             if($debug){
-                Write-Host -ForegroundColor DarkYellow $("[EXCEL][UPDATE] {0}:{1}" -f@($epic.epicid, $epic.epicname))  
+                $sindex = $index;
+                if($index -lt 10){
+                    $sindex =$("0{0}" -f @($sindex))
+                }
+                Write-Host -ForegroundColor DarkYellow $("[EXCEL][UPDATE][{0}] {1}:{2}" -f@($sindex, $epic.epicid, $epic.epicname))  
             }
             $Data.Cells.Item($index,2) = $epic.epicname
             $Data.Cells.Item($index,3) = $epic.xbox
@@ -70,7 +77,11 @@ function toExcel($debug=$false){
             # INSERT NEW
             $last_index = $Data.UsedRange.Rows.Count + 1
             if($debug){
-                Write-Host -ForegroundColor DarkBlue $("[EXCEL][INSERT][{0}] {1}:{2}" -f@($last_index, $epic.epicid, $epic.epicname))            
+                $sindex = $last_index;
+                if($last_index -lt 10){
+                    $sindex =$("0{0}" -f @($last_index))
+                }
+                Write-Host -ForegroundColor DarkBlue $("[EXCEL][INSERT][{0}] {1}:{2}" -f@($sindex, $epic.epicid, $epic.epicname))            
             }
 
             $Data.Cells.Item($last_index,1) = $epic.epicid
@@ -79,6 +90,8 @@ function toExcel($debug=$false){
             $Data.Cells.Item($last_index,4) = $epic.playstation
             $Data.Cells.Item($last_index,5) = $epic.steam
             $Data.Cells.Item($last_index,6) = $epic.nintendo
+
+            #break
         }
 
     }
@@ -89,12 +102,6 @@ function toExcel($debug=$false){
     $workbook.SaveAs($out_XLSX)
     $workbook.Close($false)
     $excel.Quit()
-
-    [System.GC]::Collect()
-    [System.GC]::WaitForPendingFinalizers()
-
-    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($workbook.Worksheets)
-    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel)
 
     Remove-Variable -Name excel
 }
@@ -141,44 +148,47 @@ function Main(){
 
                                     $already_proc = $true;
 
-                                    foreach($epicuser in $json.add){                        
+                                    foreach($epicuser in $json.add){  
+                                        
+                                        if([String]::Equals($epicuser.value.type, "accepted")){
 
-                                        $epic = @{
-                                            "epicid" = "";
-                                            "epicname" = "";
-                                            "xbox" = "";
-                                            "playstation" = "";
-                                            "steam" = "";
-                                            "nintendo" = "";
+                                            $epic = @{
+                                                "epicid" = "";
+                                                "epicname" = "";
+                                                "xbox" = "";
+                                                "playstation" = "";
+                                                "steam" = "";
+                                                "nintendo" = "";
+                                            }
+
+                                            $epic.epicid = $epicuser.id
+
+                                            $display_name = $epicuser.value.displayName;
+                                            if(-not [string]::IsNullOrEmpty($display_name)){
+                                                $epic.epicname = $display_name
+                                            }                                    
+
+                                            $global:datas_written = $true
+                                            if($epicuser.value.externalAuths.Count -gt 0){
+                                                foreach($externalauths in $epicuser.value.externalAuths){
+
+                                                    $ex_type = $externalauths.type;
+                                                    $ex_name = $externalauths.displayName; 
+
+                                                    switch ($ex_type) {
+                                                        'xbl' { $epic.xbox = $ex_name }
+                                                        'psn' { $epic.playstation = $ex_name }
+                                                        'steam' { $epic.steam = $ex_name }
+                                                        'nintendo' { $epic.nintendo = $ex_name }
+                                                        Default {}
+                                                    }                                                                                                                        
+
+                                                }                                        
+                                                
+                                            }
+
+                                            $global:EPICS += $epic
                                         }
-
-                                        $epic.epicid = $epicuser.id
-
-                                        $display_name = $epicuser.value.displayName;
-                                        if(-not [string]::IsNullOrEmpty($display_name)){
-                                            $epic.epicname = $display_name
-                                        }                                    
-
-                                        $global:datas_written = $true
-                                        if($epicuser.value.externalAuths.Count -gt 0){
-                                            foreach($externalauths in $epicuser.value.externalAuths){
-
-                                                $ex_type = $externalauths.type;
-                                                $ex_name = $externalauths.displayName; 
-
-                                                switch ($ex_type) {
-                                                    'xbl' { $epic.xbox = $ex_name }
-                                                    'psn' { $epic.playstation = $ex_name }
-                                                    'steam' { $epic.steam = $ex_name }
-                                                    'nintendo' { $epic.nintendo = $ex_name }
-                                                    Default {}
-                                                }                                                                                                                        
-
-                                            }                                        
-                                            
-                                        }
-
-                                        $global:EPICS += $epic
                                         
                                     }
                                     
@@ -202,43 +212,47 @@ function Main(){
 
                                 $already_proc = $true;
 
-                                foreach($epicuser in $json.friends){                                
+                                foreach($epicuser in $json.friends){     
+                                    
+                                    if([String]::Equals($epicuser.value.type, "accepted")){
 
-                                    $epic = @{
-                                        "epicid" = "";
-                                        "epicname" = "";
-                                        "xbox" = "";
-                                        "playstation" = "";
-                                        "steam" = "";
-                                        "nintendo" = "";
-                                    }
+                                        $epic = @{
+                                            "epicid" = "";
+                                            "epicname" = "";
+                                            "xbox" = "";
+                                            "playstation" = "";
+                                            "steam" = "";
+                                            "nintendo" = "";
+                                        }
 
-                                    $epic.epicid = $epicuser.payload[0].entity.id
+                                        $epic.epicid = $epicuser.payload[0].entity.id
 
-                                    $display_name = $epicuser.payload[0].entity.displayName;
-                                    if(-not [string]::IsNullOrEmpty($display_name)){
-                                        $epic.epicname = $display_name
-                                    }                                    
-
-                                    if($epicuser.payload[0].entity.externalAuths.Count -gt 0){
-                                        foreach($externalauths in $epicuser.payload[0].entity.externalAuths){
-
-                                            $ex_type = $externalauths.type;
-                                            $ex_name = $externalauths.displayName; 
-
-                                            switch ($ex_type) {
-                                                'xbl' { $epic.xbox = $ex_name }
-                                                'psn' { $epic.playstation = $ex_name }
-                                                'steam' { $epic.steam = $ex_name }
-                                                'nintendo' { $epic.nintendo = $ex_name }
-                                                Default {}
-                                            }                                                                                                                    
-
+                                        $display_name = $epicuser.payload[0].entity.displayName;
+                                        if(-not [string]::IsNullOrEmpty($display_name)){
+                                            $epic.epicname = $display_name
                                         }                                    
 
-                                    }
+                                        if($epicuser.payload[0].entity.externalAuths.Count -gt 0){
+                                            foreach($externalauths in $epicuser.payload[0].entity.externalAuths){
 
-                                    $global:EPICS += $epic
+                                                $ex_type = $externalauths.type;
+                                                $ex_name = $externalauths.displayName; 
+
+                                                switch ($ex_type) {
+                                                    'xbl' { $epic.xbox = $ex_name }
+                                                    'psn' { $epic.playstation = $ex_name }
+                                                    'steam' { $epic.steam = $ex_name }
+                                                    'nintendo' { $epic.nintendo = $ex_name }
+                                                    Default {}
+                                                }                                                                                                                    
+
+                                            }                                    
+
+                                        }
+
+                                        $global:EPICS += $epic
+
+                                    }
                                     
                                 }
 
