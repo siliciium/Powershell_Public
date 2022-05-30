@@ -20,6 +20,7 @@ $global:datas_written        = $false
 $global:EPICS                = @()
 $global:debug                = $true
 $global:fileformat           = "excel" #json or excel
+$global:FRIENDS_REQUEST_NOT_ACCEPTED =  @()
 
 function toExcel($debug=$false){
 
@@ -196,6 +197,9 @@ function Main(){
                                             }
 
                                             $global:EPICS += $epic
+                                        
+                                        }elseif([String]::Equals($epicuser.value.type, "outgoing")){
+                                            $global:FRIENDS_REQUEST_NOT_ACCEPTED += $epicuser; 
                                         }
                                         
                                     }
@@ -260,6 +264,8 @@ function Main(){
 
                                         $global:EPICS += $epic
 
+                                    }elseif([String]::Equals($epicuser.value.type, "outgoing")){
+                                        $global:FRIENDS_REQUEST_NOT_ACCEPTED += $epicuser; 
                                     }
                                     
                                 }
@@ -292,7 +298,29 @@ function Main(){
                         $already_proc += $epic.epicid
                     }
 
-                    Write-Host "Friends number :$($already_proc.Count)"
+                    Write-Host -ForegroundColor DarkBlue "Nombre d'amis :$($already_proc.Count)"
+                }
+
+                if($global:FRIENDS_REQUEST_NOT_ACCEPTED.Length -gt 0){
+
+                    Write-Host -ForegroundColor Magenta $("Friends requests not accepted ({0})" -f $($global:FRIENDS_REQUEST_NOT_ACCEPTED.Length))
+
+                    foreach($epic in $global:FRIENDS_REQUEST_NOT_ACCEPTED){  
+                                                
+                        $dname = $epic.value.displayName;
+                        if([string]::IsNullOrEmpty($dname)){
+                            if($epic.value.externalAuths.Length -gt 0){
+                                foreach($ext in $epic.value.externalAuths){
+                                    if(-not [string]::IsNullOrEmpty($ext.value.displayName)){
+                                        $dname = $ext.value.displayName
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        Write-Host -ForegroundColor DarkMagenta $("{0} - {1}" -f @($epic.value.id, $dname))
+                    }
                 }
                 
                 if([string]::Equals($global:fileformat, 'json')){
@@ -319,11 +347,3 @@ function Main(){
     }
 }
 Main
-
-
-
-
-
-
-
-
