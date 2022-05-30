@@ -292,7 +292,7 @@ function Main(){
                         $already_proc += $epic.epicid
                     }
 
-                    Write-Host "Nombre d'amis :$($already_proc.Count)"
+                    Write-Host "Friends number :$($already_proc.Count)"
                 }
                 
                 if([string]::Equals($global:fileformat, 'json')){
