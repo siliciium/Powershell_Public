@@ -16,23 +16,25 @@ $out_XLSX = $("C:\Users\{0}\Desktop\EpicList.xlsx" -f @($env:USERNAME));
 $global:matches_availables   = $false
 $global:friends_availables   = $false
 $global:collection_available = $false
-$global:datas_written        = $false
 $global:EPICS                = @()
 $global:debug                = $true
 $global:fileformat           = "excel" #json or excel
+$global:EXPORT               = $true
 $global:FRIENDS_REQUEST_NOT_ACCEPTED =  @()
-$global:METHOD = 1
+$global:METHOD               = 1
 
 
-function setCellsColor($index, $color=-4142){
-    $Data.Cells.Item($index,1).Interior.ColorIndex = $color
-    $Data.Cells.Item($index,2).Interior.ColorIndex = $color
-    $Data.Cells.Item($index,3).Interior.ColorIndex = $color
-    $Data.Cells.Item($index,4).Interior.ColorIndex = $color
-    $Data.Cells.Item($index,5).Interior.ColorIndex = $color
-    $Data.Cells.Item($index,6).Interior.ColorIndex = $color
-    $Data.Cells.Item($index,7).Interior.ColorIndex = $color
-    $Data.Cells.Item($index,8).Interior.ColorIndex = $color
+
+
+function setCellsColor($worksheet, $index, $color=-4142){
+    $worksheet.Cells.Item($index,1).Interior.ColorIndex = $color
+    $worksheet.Cells.Item($index,2).Interior.ColorIndex = $color
+    $worksheet.Cells.Item($index,3).Interior.ColorIndex = $color
+    $worksheet.Cells.Item($index,4).Interior.ColorIndex = $color
+    $worksheet.Cells.Item($index,5).Interior.ColorIndex = $color
+    $worksheet.Cells.Item($index,6).Interior.ColorIndex = $color
+    $worksheet.Cells.Item($index,7).Interior.ColorIndex = $color
+    $worksheet.Cells.Item($index,8).Interior.ColorIndex = $color
 }
 
 
@@ -44,42 +46,58 @@ function toExcel($debug=$false){
             Get-Process -ErrorAction Ignore EXCEL | Select-Object -ExpandProperty Id
         )
 
-
         $excel = New-Object -ComObject excel.application
         $excel.visible = $false
         $excel.DisplayAlerts = $false;
 
         $excelComPid = Compare-Object -PassThru $excelPidsBefore (Get-Process -ErrorAction Ignore EXCEL).Id
 
-        if([System.IO.File]::Exists($out_XLSX)){
-            $workbook = $Excel.Workbooks.Open($out_XLSX)
-            $Data= $workbook.Worksheets.Item(1)
+        if([System.IO.File]::Exists($out_XLSX)){    
+            $workbook  = $Excel.Workbooks.Open($out_XLSX)
+            $worksheet = $workbook.Worksheets.Item(1) 
+            $worksheet2 = $workbook.Worksheets.Item(2)            
         }else{
             $workbook = $excel.Workbooks.Add() 
             $workbook.Worksheets.Add() | Out-Null
-            $Data= $workbook.Worksheets.Item(1)
-            $Data.Name = 'EpicGames'
-            $Data.Cells.Item(1,1) = 'EpicId'
-            $Data.Cells.Item(1,2) = 'EpicName'
-            $Data.Cells.Item(1,3) = 'Xbox'
-            $Data.Cells.Item(1,4) = 'Playstation'
-            $Data.Cells.Item(1,5) = 'Steam'
-            $Data.Cells.Item(1,6) = 'Nintendo'
-            $Data.Cells.Item(1,7) = 'Date'
-            $Data.Cells.Item(1,8) = 'Removed'
+            $workbook.Worksheets.Add() | Out-Null
+            $worksheet = $workbook.Worksheets.Item(1)
+
+            $worksheet.Name = 'EpicGames'            
+            $worksheet.Cells.Item(1,1) = 'EpicId'
+            $worksheet.Cells.Item(1,2) = 'EpicName'
+            $worksheet.Cells.Item(1,3) = 'Xbox'
+            $worksheet.Cells.Item(1,4) = 'Playstation'
+            $worksheet.Cells.Item(1,5) = 'Steam'
+            $worksheet.Cells.Item(1,6) = 'Nintendo'
+            $worksheet.Cells.Item(1,7) = 'Date'
+            $worksheet.Cells.Item(1,8) = 'Removed'
 
             for($n=0; $n -lt 8; $n++){
-                $Data.Cells.Item(2,$n+1) = " "
-            }
-            
-        }
+                $worksheet.Cells.Item(2, $n+1) = " "
+            }            
 
+            $worksheet2 = $workbook.Worksheets.Item(2) 
+
+            $worksheet2.Name = 'Pending'
+            $worksheet2.Cells.Item(1,1) = 'EpicId'
+            $worksheet2.Cells.Item(1,2) = 'EpicName'
+            $worksheet2.Cells.Item(1,3) = 'Xbox'
+            $worksheet2.Cells.Item(1,4) = 'Playstation'
+            $worksheet2.Cells.Item(1,5) = 'Steam'
+            $worksheet2.Cells.Item(1,6) = 'Nintendo'
+            $worksheet2.Cells.Item(1,7) = 'Date'
+
+            for($n=0; $n -lt 7; $n++){
+                $worksheet2.Cells.Item(2, $n+1) = " "
+            }
+
+        }
         
         foreach($epic in $global:EPICS){
 
             $index = -1;
-            for($i = 3; $i -lt $Data.UsedRange.Rows.Count+1; $i++){
-                if($Data.Cells.Item($i,1).Text -eq $epic.epicid){
+            for($i = 3; $i -lt $worksheet.UsedRange.Rows.Count+1; $i++){
+                if($worksheet.Cells.Item($i,1).Text -eq $epic.epicid){
                     $index = $i;
                     break;
                 }
@@ -92,55 +110,141 @@ function toExcel($debug=$false){
                     if($index -lt 10){
                         $sindex =$("0{0}" -f @($sindex))
                     }
-                    Write-Host -ForegroundColor DarkYellow $("[EXCEL][UPDATE][{0}] {1}:{2}" -f@($sindex, $epic.epicid, $epic.epicname))  
+                    Write-Host -ForegroundColor DarkYellow $("[EXCEL][UPDATE][{0}][{1}] {2}:{3}" -f@($sindex, $epic.epicid, $epic.epicname))  
                 }
-                $Data.Cells.Item($index,2) = $epic.epicname
-                $Data.Cells.Item($index,3) = $epic.xbox
-                $Data.Cells.Item($index,4) = $epic.playstation
-                $Data.Cells.Item($index,5) = $epic.steam
-                $Data.Cells.Item($index,6) = $epic.nintendo
-                $Data.Cells.Item($index,8) = ""
+                $worksheet.Cells.Item($index,2) = $epic.epicname
+                $worksheet.Cells.Item($index,3) = $epic.xbox
+                $worksheet.Cells.Item($index,4) = $epic.playstation
+                $worksheet.Cells.Item($index,5) = $epic.steam
+                $worksheet.Cells.Item($index,6) = $epic.nintendo
+                $worksheet.Cells.Item($index,8) = ""
 
-                setCellsColor -index $index
+                setCellsColor -worksheet $worksheet -index $index
 
             }else{
                 # INSERT NEW
-                $last_index = $Data.UsedRange.Rows.Count + 1
+                $last_index = $worksheet.UsedRange.Rows.Count + 1
                 if($debug){
                     $sindex = $last_index;
                     if($last_index -lt 10){
                         $sindex =$("0{0}" -f @($last_index))
                     }
-                    Write-Host -ForegroundColor DarkBlue $("[EXCEL][INSERT][{0}] {1}:{2}" -f@($sindex, $epic.epicid, $epic.epicname))            
+                    Write-Host -ForegroundColor DarkBlue $("[EXCEL][INSERT][{0}][{1}] {2}:{3}" -f@($worksheet.name, $sindex, $epic.epicid, $epic.epicname))            
                 }
 
-                $Data.Cells.Item($last_index,1) = $epic.epicid
-                $Data.Cells.Item($last_index,2) = $epic.epicname
-                $Data.Cells.Item($last_index,3) = $epic.xbox
-                $Data.Cells.Item($last_index,4) = $epic.playstation
-                $Data.Cells.Item($last_index,5) = $epic.steam
-                $Data.Cells.Item($last_index,6) = $epic.nintendo
-                $Data.Cells.Item($last_index,7) = $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")
-
+                $worksheet.Cells.Item($last_index,1) = $epic.epicid
+                $worksheet.Cells.Item($last_index,2) = $epic.epicname
+                $worksheet.Cells.Item($last_index,3) = $epic.xbox
+                $worksheet.Cells.Item($last_index,4) = $epic.playstation
+                $worksheet.Cells.Item($last_index,5) = $epic.steam
+                $worksheet.Cells.Item($last_index,6) = $epic.nintendo
+                $worksheet.Cells.Item($last_index,7) = $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")
             }
 
         }
 
 
+        $start_index = 3;
+        foreach($epicuser in $global:FRIENDS_REQUEST_NOT_ACCEPTED){
+                        
+            # INSERT NEW
+
+            if($global:METHOD -eq 1){
+                
+                $epic = @{
+                    "epicid" = "";
+                    "epicname" = "";
+                    "xbox" = "";
+                    "playstation" = "";
+                    "steam" = "";
+                    "nintendo" = "";
+                }
+
+                $epic.epicid = $epicuser.id
+                $display_name = $epicuser.value.displayName;
+                if(-not [string]::IsNullOrEmpty($display_name)){
+                    $epic.epicname = $display_name
+                }          
+                
+                if($epicuser.value.externalAuths.Count -gt 0){
+                    foreach($externalauths in $epicuser.value.externalAuths){
+
+                        $ex_type = $externalauths.type;
+                        $ex_name = $externalauths.displayName; 
+
+                        switch ($ex_type) {
+                            'xbl' { $epic.xbox = $ex_name }
+                            'psn' { $epic.playstation = $ex_name }
+                            'steam' { $epic.steam = $ex_name }
+                            'nintendo' { $epic.nintendo = $ex_name }
+                            Default {}
+                        }                                                                                                                        
+                    }                                                            
+                }
+            }elseif($global:METHOD -eq 2){
+                
+                $epic = @{
+                    "epicid" = "";
+                    "epicname" = "";
+                    "xbox" = "";
+                    "playstation" = "";
+                    "steam" = "";
+                    "nintendo" = "";
+                }
+
+                $epicuser.payload[0].entity.id
+                $display_name = $epicuser.payload[0].entity.displayName;
+                if(-not [string]::IsNullOrEmpty($display_name)){
+                    $epic.epicname = $display_name
+                }          
+                
+                if($epicuser.payload[0].entity.externalAuths.Count -gt 0){
+                    foreach($externalauths in $epicuser.payload[0].entity.externalAuths){
+
+                        $ex_type = $externalauths.type;
+                        $ex_name = $externalauths.displayName; 
+
+                        switch ($ex_type) {
+                            'xbl' { $epic.xbox = $ex_name }
+                            'psn' { $epic.playstation = $ex_name }
+                            'steam' { $epic.steam = $ex_name }
+                            'nintendo' { $epic.nintendo = $ex_name }
+                            Default {}
+                        }                                                                                                                        
+                    }                                                            
+                }
+            }
+            
+            if($debug){                
+                Write-Host -ForegroundColor DarkBlue $("[EXCEL][INSERT][{0}][{1}] {2}:{3}" -f@($worksheet2.name, $start_index, $epic.epicid, $epic.epicname))            
+            }            
+
+            $worksheet2.Cells.Item($start_index,1) = $epic.epicid
+            $worksheet2.Cells.Item($start_index,2) = $epic.epicname
+            $worksheet2.Cells.Item($start_index,3) = $epic.xbox
+            $worksheet2.Cells.Item($start_index,4) = $epic.playstation
+            $worksheet2.Cells.Item($start_index,5) = $epic.steam
+            $worksheet2.Cells.Item($start_index,6) = $epic.nintendo
+            $worksheet2.Cells.Item($start_index,7) = $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")
+            
+            $start_index++
+        }
+
+
         Write-Host -ForegroundColor Blue 'Please wait while verifying deleted friends...'
-        for($index = 3; $index -lt $Data.UsedRange.Rows.Count+1; $index++){
+        for($index = 3; $index -lt $worksheet.UsedRange.Rows.Count+1; $index++){
 
             $exists_in_friends_list = $false;
             foreach($epic in $global:EPICS){
-                if([string]::Equals($Data.Cells.Item($index,1).Text, $epic.epicid)){
+                if([string]::Equals($worksheet.Cells.Item($index,1).Text, $epic.epicid)){
                     $exists_in_friends_list = $true;
                     break;
                 }
             }
 
             if(-not $exists_in_friends_list){
-                $Data.Cells.Item($index,8) = $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")
-                setCellsColor -index $index -color 34
+                $worksheet.Cells.Item($index,8) = $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")
+                setCellsColor -worksheet $worksheet -index $index -color 34
             }
 
         }
@@ -148,8 +252,9 @@ function toExcel($debug=$false){
 
     }finally{
         # Format, save and quit excel
-        $usedRange = $Data.UsedRange                                                                                              
-        $usedRange.EntireColumn.AutoFit() | Out-Null
+        $workbook.Worksheets.Item('Feuil1').Delete()
+        $worksheet.UsedRange.EntireColumn.AutoFit() | Out-Null                                                                                              
+        $worksheet2.UsedRange.EntireColumn.AutoFit() | Out-Null 
         $workbook.SaveAs($out_XLSX)
         $workbook.Close($false)
         $excel.Quit()
@@ -277,7 +382,6 @@ function Main(){
                                                 $epic.epicname = $display_name
                                             }                                    
 
-                                            $global:datas_written = $true
                                             if($epicuser.value.externalAuths.Count -gt 0){
                                                 foreach($externalauths in $epicuser.value.externalAuths){
 
@@ -405,22 +509,24 @@ function Main(){
                 
                 display_friends_request_not_accepted
                 
-                if([string]::Equals($global:fileformat, 'json')){
-                    
-                    $global:EPICS | ConvertTo-Json -Depth 50 | Out-File -FilePath $out_JSON -Force -Encoding utf8 -Confirm:$false                    
-                    Write-Host -ForegroundColor Green $("Exported JSON file : {0}" -f @($out_JSON))
+                if($global:EXPORT){
+                    if([string]::Equals($global:fileformat, 'json')){
+                        
+                        $global:EPICS | ConvertTo-Json -Depth 50 | Out-File -FilePath $out_JSON -Force -Encoding utf8 -Confirm:$false                    
+                        Write-Host -ForegroundColor Green $("Exported JSON file : {0}" -f @($out_JSON))
 
-                }elseif([string]::Equals($global:fileformat, 'excel')){
-                    
-                    if($global:EPICS.Count -gt 0){
-                        Write-Host -ForegroundColor Blue "Please wait while creating Excel file..."
-                        toExcel -debug $global:debug
-                        Write-Host -ForegroundColor Green $("Exported XLSX file : {0}" -f @($out_XLSX))
-                    }else{
-                        Write-Host -ForegroundColor Blue "No datas to export in Excel file."
-                    }
+                    }elseif([string]::Equals($global:fileformat, 'excel')){
+                        
+                        if($global:EPICS.Count -gt 0){
+                            Write-Host -ForegroundColor Blue "Please wait while creating Excel file..."
+                            toExcel -debug $global:debug
+                            Write-Host -ForegroundColor Green $("Exported XLSX file : {0}" -f @($out_XLSX))
+                        }else{
+                            Write-Host -ForegroundColor Blue "No datas to export in Excel file."
+                        }
 
-                }                                
+                    } 
+                }                               
             }        
         }
 
