@@ -56,8 +56,7 @@ function toExcel($debug=$false){
             $workbook  = $Excel.Workbooks.Open($out_XLSX)
             $worksheet = $workbook.Worksheets.Item('EpicGames') 
             $worksheet2 = $workbook.Worksheets.Item('Pending')            
-        }else{
-            $workbook.Worksheets.Item('Feuil1').Delete()
+        }else{            
             $workbook = $excel.Workbooks.Add() 
             $workbook.Worksheets.Add() | Out-Null            
             $worksheet = $workbook.Worksheets.Item(1)
@@ -91,6 +90,8 @@ function toExcel($debug=$false){
             for($n=0; $n -lt 7; $n++){
                 $worksheet2.Cells.Item(2, $n+1) = " "
             }
+
+            $workbook.Worksheets.Item('Feuil1').Delete()
 
         }
         
