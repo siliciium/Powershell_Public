@@ -57,6 +57,7 @@ function toExcel($debug=$false){
             $worksheet = $workbook.Worksheets.Item('EpicGames') 
             $worksheet2 = $workbook.Worksheets.Item('Pending')            
         }else{
+            $workbook.Worksheets.Item('Feuil1').Delete()
             $workbook = $excel.Workbooks.Add() 
             $workbook.Worksheets.Add() | Out-Null            
             $worksheet = $workbook.Worksheets.Item(1)
@@ -251,8 +252,7 @@ function toExcel($debug=$false){
 
 
     }finally{
-        # Format, save and quit excel
-        $workbook.Worksheets.Item('Feuil1').Delete()
+        # Format, save and quit excel        
         $worksheet.UsedRange.EntireColumn.AutoFit() | Out-Null                                                                                              
         $worksheet2.UsedRange.EntireColumn.AutoFit() | Out-Null 
         $workbook.SaveAs($out_XLSX)
