@@ -157,8 +157,8 @@ function display_friends_request_not_accepted(){
                 if([string]::IsNullOrEmpty($dname)){
                     if($epic.payload[0].entity.externalAuths.Length -gt 0){
                         foreach($ext in $epic.payload[0].entity.externalAuths){
-                            if(-not [string]::IsNullOrEmpty($epic.payload[0].entity.displayName)){
-                                $dname = $epic.payload[0].entity.displayName
+                            if(-not [string]::IsNullOrEmpty($ext.payload[0].entity.displayName)){
+                                $dname = $ext.payload[0].entity.displayName
                                 break;
                             }
                         }
