@@ -21,6 +21,7 @@ $global:EPICS                = @()
 $global:debug                = $true
 $global:fileformat           = "excel" #json or excel
 $global:FRIENDS_REQUEST_NOT_ACCEPTED =  @()
+$global:METHOD = 1
 
 function toExcel($debug=$false){
 
@@ -123,6 +124,56 @@ function toExcel($debug=$false){
 
 }
 
+
+function display_friends_request_not_accepted(){
+    if($global:FRIENDS_REQUEST_NOT_ACCEPTED.Length -gt 0){
+
+        Write-Host -ForegroundColor Magenta $("Friends requests not accepted ({0})" -f $($global:FRIENDS_REQUEST_NOT_ACCEPTED.Length))
+
+        if($global:METHOD -eq 1){
+
+            foreach($epic in $global:FRIENDS_REQUEST_NOT_ACCEPTED){  
+                                        
+                $dname = $epic.value.displayName;
+                if([string]::IsNullOrEmpty($dname)){
+                    if($epic.value.externalAuths.Length -gt 0){
+                        foreach($ext in $epic.value.externalAuths){
+                            if(-not [string]::IsNullOrEmpty($ext.value.displayName)){
+                                $dname = $ext.value.displayName
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                Write-Host -ForegroundColor DarkMagenta $("{0} - {1}" -f @($epic.value.id, $dname))
+            }
+
+        }elseif($global:METHOD -eq 2){
+
+            foreach($epic in $global:FRIENDS_REQUEST_NOT_ACCEPTED){  
+                                        
+                $dname = $epic.payload[0].entity.displayName;
+                if([string]::IsNullOrEmpty($dname)){
+                    if($epic.payload[0].entity.externalAuths.Length -gt 0){
+                        foreach($ext in $epic.payload[0].entity.externalAuths){
+                            if(-not [string]::IsNullOrEmpty($epic.payload[0].entity.displayName)){
+                                $dname = $epic.payload[0].entity.displayName
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                Write-Host -ForegroundColor DarkMagenta $("{0}" -f @($dname))
+            }
+
+        }
+    } 
+ 
+}
+
+
 function Main(){
     if ([System.IO.File]::Exists($filePath)){
 
@@ -220,6 +271,8 @@ function Main(){
 
                         if($_matches0.Length -gt 0){
 
+                            $global:METHOD = 2
+
                             $global:matches_availables = $true;
 
                             if($_matches0.Groups[0].Value -match 'friends' ){
@@ -308,28 +361,8 @@ function Main(){
 
                     Write-Host -ForegroundColor DarkBlue "Number of Epic friends : $($already_proc.Count)"
                 }
-
-                if($global:FRIENDS_REQUEST_NOT_ACCEPTED.Length -gt 0){
-
-                    Write-Host -ForegroundColor Magenta $("Friends requests not accepted ({0})" -f $($global:FRIENDS_REQUEST_NOT_ACCEPTED.Length))
-
-                    foreach($epic in $global:FRIENDS_REQUEST_NOT_ACCEPTED){  
-                                                
-                        $dname = $epic.value.displayName;
-                        if([string]::IsNullOrEmpty($dname)){
-                            if($epic.value.externalAuths.Length -gt 0){
-                                foreach($ext in $epic.value.externalAuths){
-                                    if(-not [string]::IsNullOrEmpty($ext.value.displayName)){
-                                        $dname = $ext.value.displayName
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-
-                        Write-Host -ForegroundColor DarkMagenta $("{0} - {1}" -f @($epic.value.id, $dname))
-                    }
-                }
+                
+                display_friends_request_not_accepted
                 
                 if([string]::Equals($global:fileformat, 'json')){
                     
