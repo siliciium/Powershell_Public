@@ -54,12 +54,11 @@ function toExcel($debug=$false){
 
         if([System.IO.File]::Exists($out_XLSX)){    
             $workbook  = $Excel.Workbooks.Open($out_XLSX)
-            $worksheet = $workbook.Worksheets.Item(1) 
-            $worksheet2 = $workbook.Worksheets.Item(2)            
+            $worksheet = $workbook.Worksheets.Item('EpicGames') 
+            $worksheet2 = $workbook.Worksheets.Item('Pending')            
         }else{
             $workbook = $excel.Workbooks.Add() 
-            $workbook.Worksheets.Add() | Out-Null
-            $workbook.Worksheets.Add() | Out-Null
+            $workbook.Worksheets.Add() | Out-Null            
             $worksheet = $workbook.Worksheets.Item(1)
 
             $worksheet.Name = 'EpicGames'            
@@ -76,6 +75,7 @@ function toExcel($debug=$false){
                 $worksheet.Cells.Item(2, $n+1) = " "
             }            
 
+            $workbook.Worksheets.Add() | Out-Null
             $worksheet2 = $workbook.Worksheets.Item(2) 
 
             $worksheet2.Name = 'Pending'
@@ -402,8 +402,10 @@ function Main(){
 
                                             $global:EPICS += $epic
                                         
-                                        }elseif([String]::Equals($epicuser.value.type, "outgoing")){
+                                        }elseif([String]::Equals($epicuser.value.type, "outgoing")){                                            
                                             $global:FRIENDS_REQUEST_NOT_ACCEPTED += $epicuser; 
+                                        }elseif([String]::Equals($epicuser.payload[0].entity.type, "incoming")){
+                                            # Not implemented 
                                         }
                                         
                                     }
@@ -472,7 +474,10 @@ function Main(){
 
                                     }elseif([String]::Equals($epicuser.payload[0].entity.type, "outgoing")){
                                         $global:FRIENDS_REQUEST_NOT_ACCEPTED += $epicuser; 
+                                    }elseif([String]::Equals($epicuser.payload[0].entity.type, "incoming")){
+                                        # Not implemented 
                                     }
+
                                     
                                 }
 
