@@ -234,7 +234,7 @@ function Main(){
 
                                 foreach($epicuser in $json.friends){     
                                     
-                                    if([String]::Equals($epicuser.value.type, "accepted")){
+                                    if([String]::Equals($epicuser.payload[0].entity.type, "accepted")){
 
                                         $epic = @{
                                             "epicid" = "";
@@ -272,7 +272,7 @@ function Main(){
 
                                         $global:EPICS += $epic
 
-                                    }elseif([String]::Equals($epicuser.value.type, "outgoing")){
+                                    }elseif([String]::Equals($epicuser.payload[0].entity.type, "outgoing")){
                                         $global:FRIENDS_REQUEST_NOT_ACCEPTED += $epicuser; 
                                     }
                                     
