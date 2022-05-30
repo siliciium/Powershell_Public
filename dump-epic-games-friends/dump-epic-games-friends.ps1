@@ -23,6 +23,19 @@ $global:fileformat           = "excel" #json or excel
 $global:FRIENDS_REQUEST_NOT_ACCEPTED =  @()
 $global:METHOD = 1
 
+
+function setCellsColor($index, $color=-4142){
+    $Data.Cells.Item($index,1).Interior.ColorIndex = $color
+    $Data.Cells.Item($index,2).Interior.ColorIndex = $color
+    $Data.Cells.Item($index,3).Interior.ColorIndex = $color
+    $Data.Cells.Item($index,4).Interior.ColorIndex = $color
+    $Data.Cells.Item($index,5).Interior.ColorIndex = $color
+    $Data.Cells.Item($index,6).Interior.ColorIndex = $color
+    $Data.Cells.Item($index,7).Interior.ColorIndex = $color
+    $Data.Cells.Item($index,8).Interior.ColorIndex = $color
+}
+
+
 function toExcel($debug=$false){
 
     try{
@@ -52,8 +65,10 @@ function toExcel($debug=$false){
             $Data.Cells.Item(1,4) = 'Playstation'
             $Data.Cells.Item(1,5) = 'Steam'
             $Data.Cells.Item(1,6) = 'Nintendo'
+            $Data.Cells.Item(1,7) = 'Date'
+            $Data.Cells.Item(1,8) = 'Removed'
 
-            for($n=0; $n -lt 6; $n++){
+            for($n=0; $n -lt 8; $n++){
                 $Data.Cells.Item(2,$n+1) = " "
             }
             
@@ -84,6 +99,10 @@ function toExcel($debug=$false){
                 $Data.Cells.Item($index,4) = $epic.playstation
                 $Data.Cells.Item($index,5) = $epic.steam
                 $Data.Cells.Item($index,6) = $epic.nintendo
+                $Data.Cells.Item($index,8) = ""
+
+                setCellsColor -index $index
+
             }else{
                 # INSERT NEW
                 $last_index = $Data.UsedRange.Rows.Count + 1
@@ -101,8 +120,27 @@ function toExcel($debug=$false){
                 $Data.Cells.Item($last_index,4) = $epic.playstation
                 $Data.Cells.Item($last_index,5) = $epic.steam
                 $Data.Cells.Item($last_index,6) = $epic.nintendo
+                $Data.Cells.Item($last_index,7) = $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")
 
-                #break
+            }
+
+        }
+
+
+        Write-Host -ForegroundColor Blue 'Please wait while verifying deleted friends...'
+        for($index = 3; $index -lt $Data.UsedRange.Rows.Count+1; $index++){
+
+            $exists_in_friends_list = $false;
+            foreach($epic in $global:EPICS){
+                if([string]::Equals($Data.Cells.Item($index,1).Text, $epic.epicid)){
+                    $exists_in_friends_list = $true;
+                    break;
+                }
+            }
+
+            if(-not $exists_in_friends_list){
+                $Data.Cells.Item($index,8) = $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")
+                setCellsColor -index $index -color 34
             }
 
         }
@@ -172,6 +210,9 @@ function display_friends_request_not_accepted(){
     } 
  
 }
+
+
+
 
 
 function Main(){
