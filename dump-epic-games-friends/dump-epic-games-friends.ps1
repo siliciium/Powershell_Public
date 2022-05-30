@@ -24,95 +24,103 @@ $global:FRIENDS_REQUEST_NOT_ACCEPTED =  @()
 
 function toExcel($debug=$false){
 
-    $excelPidsBefore = @(
-        Get-Process -ErrorAction Ignore EXCEL | Select-Object -ExpandProperty Id
-    )
+    try{
+
+        $excelPidsBefore = @(
+            Get-Process -ErrorAction Ignore EXCEL | Select-Object -ExpandProperty Id
+        )
 
 
-    $excel = New-Object -ComObject excel.application
-    $excel.visible = $false
-    $excel.DisplayAlerts = $false;
+        $excel = New-Object -ComObject excel.application
+        $excel.visible = $false
+        $excel.DisplayAlerts = $false;
 
-    $excelComPid = Compare-Object -PassThru $excelPidsBefore (Get-Process -ErrorAction Ignore EXCEL).Id
+        $excelComPid = Compare-Object -PassThru $excelPidsBefore (Get-Process -ErrorAction Ignore EXCEL).Id
 
-    if([System.IO.File]::Exists($out_XLSX)){
-        $workbook = $Excel.Workbooks.Open($out_XLSX)
-        $Data= $workbook.Worksheets.Item(1)
-    }else{
-        $workbook = $excel.Workbooks.Add() 
-        $workbook.Worksheets.Add() | Out-Null
-        $Data= $workbook.Worksheets.Item(1)
-        $Data.Name = 'EpicGames'
-        $Data.Cells.Item(1,1) = 'EpicId'
-        $Data.Cells.Item(1,2) = 'EpicName'
-        $Data.Cells.Item(1,3) = 'Xbox'
-        $Data.Cells.Item(1,4) = 'Playstation'
-        $Data.Cells.Item(1,5) = 'Steam'
-        $Data.Cells.Item(1,6) = 'Nintendo'
-
-        for($n=0; $n -lt 6; $n++){
-            $Data.Cells.Item(2,$n+1) = " "
-        }
-        
-    }
-
-    foreach($epic in $global:EPICS){
-
-        $index = -1;
-        for($i = 3; $i -lt $Data.UsedRange.Rows.Count+1; $i++){
-            if($Data.Cells.Item($i,1).Text -eq $epic.epicid){
-                $index = $i;
-                break;
-            }
-        }
-
-        if($index -ne -1){
-            # UPDATE EXISTING
-            if($debug){
-                $sindex = $index;
-                if($index -lt 10){
-                    $sindex =$("0{0}" -f @($sindex))
-                }
-                Write-Host -ForegroundColor DarkYellow $("[EXCEL][UPDATE][{0}] {1}:{2}" -f@($sindex, $epic.epicid, $epic.epicname))  
-            }
-            $Data.Cells.Item($index,2) = $epic.epicname
-            $Data.Cells.Item($index,3) = $epic.xbox
-            $Data.Cells.Item($index,4) = $epic.playstation
-            $Data.Cells.Item($index,5) = $epic.steam
-            $Data.Cells.Item($index,6) = $epic.nintendo
+        if([System.IO.File]::Exists($out_XLSX)){
+            $workbook = $Excel.Workbooks.Open($out_XLSX)
+            $Data= $workbook.Worksheets.Item(1)
         }else{
-            # INSERT NEW
-            $last_index = $Data.UsedRange.Rows.Count + 1
-            if($debug){
-                $sindex = $last_index;
-                if($last_index -lt 10){
-                    $sindex =$("0{0}" -f @($last_index))
-                }
-                Write-Host -ForegroundColor DarkBlue $("[EXCEL][INSERT][{0}] {1}:{2}" -f@($sindex, $epic.epicid, $epic.epicname))            
+            $workbook = $excel.Workbooks.Add() 
+            $workbook.Worksheets.Add() | Out-Null
+            $Data= $workbook.Worksheets.Item(1)
+            $Data.Name = 'EpicGames'
+            $Data.Cells.Item(1,1) = 'EpicId'
+            $Data.Cells.Item(1,2) = 'EpicName'
+            $Data.Cells.Item(1,3) = 'Xbox'
+            $Data.Cells.Item(1,4) = 'Playstation'
+            $Data.Cells.Item(1,5) = 'Steam'
+            $Data.Cells.Item(1,6) = 'Nintendo'
+
+            for($n=0; $n -lt 6; $n++){
+                $Data.Cells.Item(2,$n+1) = " "
             }
-
-            $Data.Cells.Item($last_index,1) = $epic.epicid
-            $Data.Cells.Item($last_index,2) = $epic.epicname
-            $Data.Cells.Item($last_index,3) = $epic.xbox
-            $Data.Cells.Item($last_index,4) = $epic.playstation
-            $Data.Cells.Item($last_index,5) = $epic.steam
-            $Data.Cells.Item($last_index,6) = $epic.nintendo
-
-            #break
+            
         }
 
+        
+        foreach($epic in $global:EPICS){
+
+            $index = -1;
+            for($i = 3; $i -lt $Data.UsedRange.Rows.Count+1; $i++){
+                if($Data.Cells.Item($i,1).Text -eq $epic.epicid){
+                    $index = $i;
+                    break;
+                }
+            }
+
+            if($index -ne -1){
+                # UPDATE EXISTING
+                if($debug){
+                    $sindex = $index;
+                    if($index -lt 10){
+                        $sindex =$("0{0}" -f @($sindex))
+                    }
+                    Write-Host -ForegroundColor DarkYellow $("[EXCEL][UPDATE][{0}] {1}:{2}" -f@($sindex, $epic.epicid, $epic.epicname))  
+                }
+                $Data.Cells.Item($index,2) = $epic.epicname
+                $Data.Cells.Item($index,3) = $epic.xbox
+                $Data.Cells.Item($index,4) = $epic.playstation
+                $Data.Cells.Item($index,5) = $epic.steam
+                $Data.Cells.Item($index,6) = $epic.nintendo
+            }else{
+                # INSERT NEW
+                $last_index = $Data.UsedRange.Rows.Count + 1
+                if($debug){
+                    $sindex = $last_index;
+                    if($last_index -lt 10){
+                        $sindex =$("0{0}" -f @($last_index))
+                    }
+                    Write-Host -ForegroundColor DarkBlue $("[EXCEL][INSERT][{0}] {1}:{2}" -f@($sindex, $epic.epicid, $epic.epicname))            
+                }
+
+                $Data.Cells.Item($last_index,1) = $epic.epicid
+                $Data.Cells.Item($last_index,2) = $epic.epicname
+                $Data.Cells.Item($last_index,3) = $epic.xbox
+                $Data.Cells.Item($last_index,4) = $epic.playstation
+                $Data.Cells.Item($last_index,5) = $epic.steam
+                $Data.Cells.Item($last_index,6) = $epic.nintendo
+
+                #break
+            }
+
+        }
+
+
+    }finally{
+        # Format, save and quit excel
+        $usedRange = $Data.UsedRange                                                                                              
+        $usedRange.EntireColumn.AutoFit() | Out-Null
+        $workbook.SaveAs($out_XLSX)
+        $workbook.Close($false)
+        $excel.Quit()
+
+        Stop-Process -Id $excelComPid -Confirm:$false -PassThru | Out-Null
+
+        Remove-Variable -Name excel
     }
     
-    # Format, save and quit excel
-    $usedRange = $Data.UsedRange                                                                                              
-    $usedRange.EntireColumn.AutoFit() | Out-Null
-    $workbook.SaveAs($out_XLSX)
-    $workbook.Close($false)
-    $excel.Quit()
 
-    Stop-Process -Id $excelComPid -Confirm:$false -PassThru | Out-Null
-
-    Remove-Variable -Name excel
 }
 
 function Main(){
@@ -346,4 +354,5 @@ function Main(){
         Write-Host -ForegroundColor Red $("ERROR: Unable to find {0}" -f @($filePath))
     }
 }
+
 Main
