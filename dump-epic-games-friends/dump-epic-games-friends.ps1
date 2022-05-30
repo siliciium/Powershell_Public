@@ -517,7 +517,7 @@ function Main(){
                         $already_proc += $epic.epicid
                     }
 
-                    Write-Host -ForegroundColor DarkBlue "Number of Epic friends : $($already_proc.Count)"
+                    Write-Host -ForegroundColor Green "Number of Epic friends : $($already_proc.Count)"
                 }
                 
                 display_friends_request_not_accepted
