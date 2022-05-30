@@ -56,12 +56,16 @@ function toExcel($debug=$false){
             $workbook  = $Excel.Workbooks.Open($out_XLSX)
             $worksheet = $workbook.Worksheets.Item('EpicGames') 
             $worksheet2 = $workbook.Worksheets.Item('Pending')            
-        }else{            
-            $workbook = $excel.Workbooks.Add() 
-            $workbook.Worksheets.Add() | Out-Null            
-            $worksheet = $workbook.Worksheets.Item(1)
+        }else{  
+            
+            # $workbook.Worksheets.Count
+            # write-host $("1-"  + $workbook.ActiveSheet.Name)
 
-            $worksheet.Name = 'EpicGames'            
+            $workbook = $excel.Workbooks.Add() 
+            $workbook.Worksheets.Add() | Out-Null      
+            $workbook.Worksheets.Add() | Out-Null      
+            $worksheet = $workbook.Worksheets.Item(1)            
+                        
             $worksheet.Cells.Item(1,1) = 'EpicId'
             $worksheet.Cells.Item(1,2) = 'EpicName'
             $worksheet.Cells.Item(1,3) = 'Xbox'
@@ -74,11 +78,9 @@ function toExcel($debug=$false){
             for($n=0; $n -lt 8; $n++){
                 $worksheet.Cells.Item(2, $n+1) = " "
             }            
-
-            $workbook.Worksheets.Add() | Out-Null
-            $worksheet2 = $workbook.Worksheets.Item(2) 
-
-            $worksheet2.Name = 'Pending'
+            
+            $worksheet2 = $workbook.Worksheets.Item(2)             
+            
             $worksheet2.Cells.Item(1,1) = 'EpicId'
             $worksheet2.Cells.Item(1,2) = 'EpicName'
             $worksheet2.Cells.Item(1,3) = 'Xbox'
@@ -90,11 +92,16 @@ function toExcel($debug=$false){
             for($n=0; $n -lt 7; $n++){
                 $worksheet2.Cells.Item(2, $n+1) = " "
             }
-
+            
             $workbook.Worksheets.Item('Feuil1').Delete()
 
+            $worksheet = $workbook.Worksheets.Item(1)
+            $worksheet.Name = 'EpicGames'
+            $worksheet2 = $workbook.Worksheets.Item(2)
+            $worksheet2.Name = 'Pending'
+
         }
-        
+
         foreach($epic in $global:EPICS){
 
             $index = -1;
@@ -112,7 +119,7 @@ function toExcel($debug=$false){
                     if($index -lt 10){
                         $sindex =$("0{0}" -f @($sindex))
                     }
-                    Write-Host -ForegroundColor DarkYellow $("[EXCEL][UPDATE][{0}][{1}] {2}:{3}" -f@($sindex, $epic.epicid, $epic.epicname))  
+                    Write-Host -ForegroundColor DarkYellow $("[EXCEL][UPDATE][{0}][{1}] {2}:{3}" -f@($worksheet.name, $sindex, $epic.epicid, $epic.epicname))  
                 }
                 $worksheet.Cells.Item($index,2) = $epic.epicname
                 $worksheet.Cells.Item($index,3) = $epic.xbox
@@ -250,12 +257,12 @@ function toExcel($debug=$false){
             }
 
         }
-
+         
 
     }finally{
-        # Format, save and quit excel        
+        # Format, save and quit excel  
         $worksheet.UsedRange.EntireColumn.AutoFit() | Out-Null                                                                                              
-        $worksheet2.UsedRange.EntireColumn.AutoFit() | Out-Null 
+        $worksheet2.UsedRange.EntireColumn.AutoFit() | Out-Null              
         $workbook.SaveAs($out_XLSX)
         $workbook.Close($false)
         $excel.Quit()
