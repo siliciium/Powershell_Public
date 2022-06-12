@@ -1,4 +1,4 @@
-# This file must be save has UTF-8 with BOM !
+# This file must be save as UTF-8 with BOM !
 Clear-Host
 
 # Save the current console foreground color
