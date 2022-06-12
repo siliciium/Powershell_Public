@@ -13,7 +13,7 @@ function showDuration($totalseconds){
     $hours   = ([string]$hours).PadLeft(2, '0')
     $minutes = ([string]$minutes).PadLeft(2, '0')
     $seconds = ([string]$seconds).PadLeft(2, '0')
-    Write-Host -ForegroundColor Blue $("[+] Finished in {0}:{1}:{2}`r`n" -f @($hours, $minutes, $seconds))
+    Write-Host -ForegroundColor Blue $("[+] Finished in {0}:{1}:{2}{3}" -f @($hours, $minutes, $seconds, [System.Environment]::NewLine))
 }
 
 
