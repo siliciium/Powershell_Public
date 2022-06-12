@@ -52,6 +52,7 @@ function Main(){
   # Get the cursor position before call showProgress(), this is where funciton start to write in console
   $top = [console]::CursorTop+2
   $i = 1;
+  # Do some job ...
   for($n = 0; $n -lt $total; $n++){
     # Call the function in your loop
     showProgress -PercentComplete $i -Status $("item:{0}" -f @($n)) -total $total -CursorTop $top
