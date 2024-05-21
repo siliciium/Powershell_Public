@@ -1,3 +1,5 @@
+# Multicast DNS (mDNS) responder
+
 **USAGE**  
 - mDNS must be enable on Windows (enabled by default)  
 - Configure variable `$interface` with your own network interface name.  
