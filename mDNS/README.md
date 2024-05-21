@@ -1,6 +1,6 @@
 **USAGE**  
 - mDNS must be enable on Windows (enabled by default)  
-- Configure variable `$interface` with your own network inerface name.  
+- Configure variable `$interface` with your own network interface name.  
   You can get all your interfaces with `PS> Get-NetAdapter` 
 
 *Note :  
