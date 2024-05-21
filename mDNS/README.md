@@ -7,7 +7,7 @@
 
 *Note :  
 Responder listen on `IPv4` and , if available, on `IPv6`.  
-Responder only responds to types `A` and `AAAA`.  
+Responder only responds to `Question` types `A` and `AAAA` and ignore `AnswerRR`.  
 You can run the script into Visual Code and use `CTRL+C` to stop the responder.*  
 
 **TEST**  
