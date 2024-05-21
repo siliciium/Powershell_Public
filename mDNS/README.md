@@ -12,8 +12,13 @@ You can run the script into Visual Code and use `CTRL+C` to stop the responder.*
 
 **TEST**  
 ```
-PS> Resolve-DnsName test.local
+PS> Resolve-DnsName test.local  
+Name                                           Type   TTL   Section    IPAddress
+----                                           ----   ---   -------    ---------
+test.local                                     AAAA   120   Answer     XXXX::XXXX:XXXX:XXXX:XXXX
+test.local                                     A      120   Answer     XX.X.X.XX
 ```
+
 
 **UTIL**  
 ```
