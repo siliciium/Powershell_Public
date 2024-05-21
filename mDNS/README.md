@@ -8,7 +8,9 @@ You can run the script into Visual Code and use `CTRL+C` to stop the responder.
 Responder only responds to types `A` and `AAAA`.*  
 
 **TEST**  
-`PS> Resolve-DnsName test.local`
+```
+PS> Resolve-DnsName test.local
+```
 
 **UTIL**  
 ```
