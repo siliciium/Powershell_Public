@@ -4,8 +4,9 @@
   You can get all your interfaces with `PS> Get-NetAdapter` 
 
 *Note :  
-You can run the script into Visual Code and use `CTRL+C` to stop the responder.  
-Responder only responds to types `A` and `AAAA`.*  
+Responder listen on `IPv4` and , if available, on `IPv6`.  
+Responder only responds to types `A` and `AAAA`.  
+You can run the script into Visual Code and use `CTRL+C` to stop the responder.*  
 
 **TEST**  
 ```
