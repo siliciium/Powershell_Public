@@ -156,7 +156,7 @@ function ParseAns([byte[]]$pkt, [bool]$dump){
 }
 
 
-function mDNS_cli($mDNS_QM, [string]$qname, [string]$qtype, [switch]$IPv6, [switch]$verbose, [switch]$dump){
+function mDNS_querier([string]$qname, [string]$qtype, [switch]$IPv6, [switch]$verbose, [switch]$dump){
 
     if($IPv6.IsPresent){
         $UdpClient = New-Object System.Net.Sockets.UdpClient([System.Net.Sockets.AddressFamily]::InterNetworkV6)
@@ -239,8 +239,8 @@ function mDNS_cli($mDNS_QM, [string]$qname, [string]$qtype, [switch]$IPv6, [swit
 
 
 try{
-    #mDNS_cli -mDNS_QM $mDNS_QM -qname "test.local" -qtype "A" -verbose # -verbose -dump
-    mDNS_cli -mDNS_QM $mDNS_QM -qname $("{0}.local" -f $env:COMPUTERNAME) -qtype "A" -IPv6 #-verbose -dump
+    #mDNS_querier -qname "test.local" -qtype "A" -verbose # -verbose -dump
+    mDNS_querier -qname $("{0}.local" -f $env:COMPUTERNAME) -qtype "A" -IPv6 #-verbose -dump
 }catch{
     Write-Host -ForegroundColor Red $_
 }finally{
