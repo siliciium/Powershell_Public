@@ -10,6 +10,13 @@ Responder listen on `IPv4` and , if available, on `IPv6`.
 Responder only responds to `Question` types `A` and `AAAA` and ignore `AnswerRR`.  
 You can run the script into Visual Code and use `CTRL+C` to stop the responder.*  
 
+**COMMAND**  
+```
+$ipv4 = [System.Net.IPAddress]::Parse("XX.X.X.XX")  
+$ipv6 = [System.Net.IPAddress]::Parse("XXXX::XXXX:XXXX:XXXX:XXXX")  
+mDNSResponder -ipv4 $ipv4 -ipv6 $ipv6 -verbose  
+```
+
 **TEST**  
 ```
 PS> Resolve-DnsName test.local  
