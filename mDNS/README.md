@@ -41,10 +41,31 @@ Resolve-DnsName mdns.mcast.net (IANA reserved)
   mDNS_querier -qname "test.local" -qtype "A" -IPv6
   ```
 
-*Note :   
-Only one record of type `A` or `AAAA` is supported.  
+*Note :  
+Switch availables : `-verbose` ,`-dump` and `-IPv6`  
+Only `one record` of type `A` or `AAAA` is supported.  
 You can run the script into Visual Code and use `CTRL+C` to stop the responder.*    
   
+**EXAMPLE**  
+Using `-dump` switch  
+```
+Question [A] test.local
+TID            : 00 00
+Flags          : 84 00
+Question       : 00 00
+AnswerRRS      : 00 01
+AuthorityRRS   : 00 00
+AdditionalRRS  : 00 00
+AnswerName     : test.local
+AnswerNameNull : 00
+Type           : A
+Class          : 00 01
+TTL            : 60
+IPLen          : 00 04
+IP             : 10.0.0.15
+test.local A 10.0.0.15 (TTL:60)
+```
+
   
 **REFERENCES**  
 https://www.rfc-editor.org/rfc/rfc6762.html  
