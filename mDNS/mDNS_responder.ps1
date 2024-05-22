@@ -18,8 +18,6 @@ Clear-Host
 # mDNS Responder
 
 $interface = ""; # set network interface name
-$verbose = $false;
-
 
 $ipv6_enabled = $false;
 $adapter = Get-NetAdapter -ErrorAction SilentlyContinue -Name $interface;
@@ -103,7 +101,54 @@ if(-not $ipv6_enabled){
     Write-Host -ForegroundColor Yellow "Note  : Questions [AAAA] disabled (no IPv6 addr)"   
 }
 
-$mDNS_ans = [ordered]@{
+
+$mDNS_Type = @{
+    "A"    = [byte[]](0x00, 0x01);
+    "AAAA" = [byte[]](0x00, 0x1c);
+    "ANY"  = [byte[]](0x00, 0xff);
+}
+
+function Forge($mDNS_ans){
+
+    $ignore = ("sAnswerName", "sType", "sIP", "iTTL")
+
+    $pkt = [System.Collections.ArrayList]@()
+    foreach($k in $mDNS_ans.Keys){
+        if(-not $ignore.Contains($k)){
+            $pkt.AddRange($mDNS_ans[$k])
+        }
+    }
+    return $pkt;
+}
+
+function Set_IP($ans, [string]$ip, [bool]$IPv6=$false){
+    $b_ip = [System.Net.IPAddress]::Parse($ip).GetAddressBytes() 
+    $b_iplen = [System.BitConverter]::GetBytes([System.Convert]::ToUInt16($b_ip.Length))    
+    [Array]::Reverse($b_iplen) # network order big-endian
+
+    $ans.IPLen = $b_iplen    
+    $ans.IP = $b_ip
+    $ans.sIP = [System.Net.IPAddress]::new($b_ip).IPAddressToString
+    
+    return $ans
+}
+
+
+function Dump($ans){
+       
+    foreach($key in $ans.Keys){
+        if($ans[$key].GetType().Name -ne "String" -and $ans[$key].GetType().Name -ne "UInt32"){
+            Write-Host "$([string]($key).PadRight(14)) : $(($ans[$key]|ForEach-Object ToString X2) -join ' ')"
+        }else{
+            Write-Host -ForegroundColor DarkGray "$([string]($key).PadRight(14)) : $($ans[$key])"
+        }
+    }
+}
+
+function ParseAns([byte[]]$pkt, [bool]$dump, $type="QM"){
+
+    <#
+    $mDNS_ans = [ordered]@{
     "TID"            = [byte[]]@(0x00, 0x00); # Transaction id
     "Flags"          = [byte[]]@(0x84, 0x00); # Flags
     "Question"       = [byte[]]@(0x00, 0x00); # Question
@@ -117,68 +162,57 @@ $mDNS_ans = [ordered]@{
     "TTL"            = [byte[]]@(0x00, 0x00, 0x00, 0x78); # TTL 120 seconds
     "IPLen"          = [byte[]]@(0x00);       # IPLen
     "IP"             = [byte[]]@(0x00);       # IPv4 or # IPv6
-}
-
-function Forge($mDNS_ans){
-    $pkt = [System.Collections.ArrayList]@()
-    $mDNS_ans.Values | %{
-        $pkt.AddRange($_)
     }
-    return $pkt;
-}
+    #>
 
-function Set_IP([string]$ip, [bool]$IPv6=$false){
-    $b_ip = [System.Net.IPAddress]::Parse($ip).GetAddressBytes() 
-    $b_iplen = [System.BitConverter]::GetBytes([System.Convert]::ToUInt16($b_ip.Length))    
-    [Array]::Reverse($b_iplen) # network order big-endian
+    $mDNS_ans = [ordered]@{}
+    $mDNS_ans.TID           = $pkt[0..1]
+    $mDNS_ans.Flags         = $pkt[2..3]
+    $mDNS_ans.Question      = $pkt[4..5]
+    $mDNS_ans.AnswerRRS     = $pkt[6..7]
+    $mDNS_ans.AuthorityRRS  = $pkt[8..9]
+    $mDNS_ans.AdditionalRRS = $pkt[10..11]
 
-    $mDNS_ans.IP = $b_ip
-    $mDNS_ans.IPLen = $b_iplen
-}
+    $labels = @()
 
-function Get_QName([byte[]]$MDNS_Name){
-    $know_total_len = $MDNS_Name.Count;
-    $total_len = 0
-    $offset = 0;
-    $name = @()
-    while($total_len -ne $know_total_len){
+    $offset = 12
+    do{
 
-            $bl  = $MDNS_Name[$offset];
-            $len = $offset+$bl
-            $offset += 1;
+        $len = $pkt[$offset];
+        if($len -ne 0x00){
+            $offset += 1
+            $labels += [System.Text.Encoding]::ASCII.GetString( $pkt[$offset..($offset+($len-1))] )
+            $offset += $len
+        }
 
-            $datas = [System.Text.Encoding]::Ascii.getstring( $MDNS_Name[$offset..$len] )
-            $total_len += $datas.Length +1
+    }while($len -ne 0x00)
 
-            $name += $datas
+    $mDNS_ans.AnswerName = $pkt[12..$offset]
+    $mDNS_ans.sAnswerName = $labels -join "."
 
-            $offset = $total_len;
+    $btype = $pkt[($offset+1)..($offset+2)]
+    $mDNS_ans.Type = $btype
+    if($(Compare-Object -ReferenceObject $btype -DifferenceObject $mDNS_Type.AAAA).Count -eq 0){
+        $mDNS_ans.sType = "AAAA"
+    }elseif($(Compare-Object -ReferenceObject $btype -DifferenceObject $mDNS_Type.A).Count -eq 0){
+        $mDNS_ans.sType = "A"
+    }elseif($(Compare-Object -ReferenceObject $btype -DifferenceObject $mDNS_Type.ANY).Count -eq 0){
+        $mDNS_ans.sType = "ANY"
+    }    
+
+    $mDNS_ans.Class = $pkt[($offset+3)..($offset+4)]
+
+    if($dump){
+        Dump -ans $mDNS_ans;
     }
 
-    return $name -join "."
-}
-
-function Get_QType([byte[]]$pkt){
-
-    $p0 = [byte[]](0x00, 0x1c, 0x00, 0x01) # Type AAAA
-    $p1 = [byte[]](0x00, 0x01, 0x00, 0x01) # Type A
-    $p2 = [byte[]](0x00, 0xff, 0x00, 0x01) # Type ANY
-
-    $b = [byte[]]($pkt[($pkt.Length-4)..$pkt.Length])
-
-    if($(Compare-Object -ReferenceObject $b -DifferenceObject $p0).Count -eq 0){
-        return "AAAA"
-    }elseif($(Compare-Object -ReferenceObject $b -DifferenceObject $p1).Count -eq 0){
-        return "A"
-    }elseif($(Compare-Object -ReferenceObject $b -DifferenceObject $p2).Count -eq 0){
-        return "ANY"
-    }
-    return ""
+    return $mDNS_ans
 
 }
 
 
-function mDNSServer($mDNS_ans){
+
+function mDNSResponder($ipv4, $ipv6, [switch]$verbose){
 
     $rx_pkt = [byte[]]::new(512)
     
@@ -191,7 +225,7 @@ function mDNSServer($mDNS_ans){
     while ($true)
     {
 
-        Write-Host -ForegroundColor White "Waiting for multicast packets......."
+        Write-Host -ForegroundColor Green "Waiting for multicast packets......."
 
         while($mcastSocket.Available -eq 0){            
             Start-Sleep -Milliseconds 5;
@@ -225,67 +259,54 @@ function mDNSServer($mDNS_ans){
         # Ignore packet type AnswerRRS, proced only Question
         if(-not ($rx_pkt[7] -eq 0x01)){
 
-            if($verbose){
-                $i = 0;
-                foreach($b in $rx_pkt){
-                    if($i -lt $rb){
-                        Write-Host -NoNewline -ForegroundColor DarkGray $("{0} " -f $b.ToString("X2"))                
-                    }
-                    $i++
-                }
-                Write-Host
-            }
+            $ans = ParseAns -pkt $rx_pkt -dump $verbose.IsPresent
 
-            $rx_pkt_truncated = [System.Collections.ArrayList]@()
-            for($i=12; $i -lt $rb; $i++){
-                $rx_pkt_truncated.AddRange([byte[]]@($rx_pkt[$i])) 
-            }        
+            $ans.Flags     = [byte[]](0x84, 0x00) # Tell to Flush Cache
+            $ans.Question  = [byte[]](0x00, 0x00)
+            $ans.AnswerRRS = [byte[]](0x00, 0x01)
 
-            $qtype = Get_QType -pkt $rx_pkt_truncated;
-
-            if([string]::Equals($qtype, "AAAA") -and !$ipv6_enabled){
+            if([string]::Equals($ans.sType, "AAAA") -and !$ipv6_enabled){
                 Write-Host -ForegroundColor DarkCyan "Question [AAAA] ignored (no IPv6 addr)"
                 continue;
             }
 
-
-            $b_qname = [System.Collections.ArrayList]@()
-            for($i=12; $i -lt $rb-5; $i++){
-                $b_qname.AddRange([byte[]]@($rx_pkt[$i])) 
-            }
-
-            Write-Host -ForegroundColor Magenta $("Question [{0}] {1}" -f @($qtype, $(Get_QName -MDNS_Name $b_qname)))
+            Write-Host -ForegroundColor Magenta $("Question [{0}] {1}" -f @($ans.sType, $ans.sAnswerName))
             
-            $mDNS_ans.AnswerName = $b_qname
 
-            switch($qtype){
+            $ttl = [byte[]]@(0x00, 0x00, 0x00, 0x78) # 120 seconds, 2mins
+            $ans.TTL = $ttl
+            [array]::Reverse($ttl);
+            $ttl = [bitconverter]::ToUInt32($ttl, 0)
+            $ans.iTTL = $ttl
+            [array]::Reverse($ans.TTL);
+
+            switch($ans.sType){
                 "A" { 
-                    $mDNS_ans.Type = [byte[]](0x00, 0x01)
-                    Set_IP -ip $ipv4
+                    $ans = Set_IP -ans $ans -ip $ipv4
                     break;
                 }
                 "AAAA" {
-                    $mDNS_ans.Type = [byte[]](0x00, 0x1c)
-                    Set_IP -ip $ipv6 -IPv6 $true
+                    $ans = Set_IP -ans $ans -ip $ipv6 -IPv6 $true
                     break;
                 }
                 default { break; }
             }
+            
 
+            $bAns = Forge -mDNS_ans $ans; 
 
-            $ans = Forge -mDNS_ans $mDNS_ans;  
             do{
 
-                $sb = $mcastSocket.SendTo($ans, $ep)                
+                $sb = $mcastSocket.SendTo($bAns, $ep)                
 
                 Write-Host -ForegroundColor Blue $("Transmit {0} byte(s) {1}:{2} ➔  {3}:{4}" -f @($sb, $src, $remoteEP.Port, $grp, $ep.Port)) 
-                if($verbose){       
-                    Write-host -ForegroundColor DarkGray $(($ans|ForEach-Object ToString X2) -join ' ')
+                if($verbose){
+                    Dump -ans $ans       
                 }
 
                 Start-Sleep -Milliseconds 5
             
-            }while($sb -ne $ans.Length)
+            }while($sb -ne $bAns.Length)
 
         
 
@@ -297,7 +318,12 @@ function mDNSServer($mDNS_ans){
 }
 
 try{
-    mDNSServer -mDNS_ans $mDNS_ans
+
+    # Tell to not use server computer ipv4 address but use specific adress for the response
+    $ipv4 = [System.Net.IPAddress]::Parse("10.0.1.15")
+
+    mDNSResponder -ipv4 $ipv4 -ipv6 $ipv6 -verbose
+
 }catch{
     Write-Host -ForegroundColor Red $_
 }finally{
