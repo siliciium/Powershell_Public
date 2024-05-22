@@ -27,5 +27,24 @@ netsh interface ipv6 show joins
 Resolve-DnsName mdns.mcast.net (IANA reserved) 
 ```
 
+
+    
+# Multicast DNS (mDNS) querier
+
+**USAGE**  
+  IPv4 
+  ```
+  mDNS_querier -qname "test.local" -qtype "A"
+  ```  
+  IPv6
+  ```
+  mDNS_querier -qname "test.local" -qtype "A" -IPv6
+  ```
+
+*Note :   
+Only one record of type `A` or `AAAA` is supported.  
+You can run the script into Visual Code and use `CTRL+C` to stop the responder.*    
+  
+  
 **REFERENCES**  
-https://www.rfc-editor.org/rfc/rfc6762.html
+https://www.rfc-editor.org/rfc/rfc6762.html  
