@@ -13,7 +13,7 @@ You can run the script into Visual Code and use `CTRL+C` to stop the responder.*
 **FUNCTION**  
 ```
 $nipv6 = [System.Net.IPAddress]::Parse("XX.X.X.XX")  
-$nipv6 = [System.Net.IPAddress]::Parse("XXXX::XXXX:XXXX:XXXX:XXXX")  
+$nipv6 = [System.Net.IPAddress]::Parse("XXXX::XXXX:XXXX:XXXX:XXXX")   
 mDNS_responder -nipv4 $nipv4 -nipv6 $nipv6 -verbose #-flush_cache_bit
 ```
 
