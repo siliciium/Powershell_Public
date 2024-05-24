@@ -10,11 +10,11 @@ Responder listen on `IPv4` and , if available, on `IPv6`.
 Responder only responds to `Question` types `A` and `AAAA` and ignore `AnswerRR`.  
 You can run the script into Visual Code and use `CTRL+C` to stop the responder.*  
 
-**COMMAND**  
+**FUNCTION**  
 ```
-$ipv4 = [System.Net.IPAddress]::Parse("XX.X.X.XX")  
-$ipv6 = [System.Net.IPAddress]::Parse("XXXX::XXXX:XXXX:XXXX:XXXX")  
-mDNSResponder -ipv4 $ipv4 -ipv6 $ipv6 -verbose  
+$nipv6 = [System.Net.IPAddress]::Parse("XX.X.X.XX")  
+$nipv6 = [System.Net.IPAddress]::Parse("XXXX::XXXX:XXXX:XXXX:XXXX")  
+mDNSResponder -nipv4 $nipv4 -nipv6 $nipv6 -verbose #-flush_cache_bit
 ```
 
 **TEST**  
