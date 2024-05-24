@@ -18,8 +18,9 @@ Clear-Host
 # mDNS Responder
 
 $interface = ""; # set network interface name
+$unicast = $false; # UNICAST response ?
 
-$ipv6_enabled = $false;
+$ipv6_enabled = $true;
 $adapter = Get-NetAdapter -ErrorAction SilentlyContinue -Name $interface;
 if($adapter){
     $ipv4 = $(Get-NetIPAddress -InterfaceIndex $adapter.ifIndex | Where-Object { $_.AddressFamily -eq 'IPv4' } | Select-Object -Property IPAddress).IPAddress
@@ -69,6 +70,16 @@ if($ipv6_enabled){
     $localEP6 = New-Object System.Net.IPEndPoint ($localIP6Addr, $mcastPort)
     $mcastSocket.Bind($localEP6)
 
+
+    $unicastSocket = New-Object System.Net.Sockets.Socket([System.Net.Sockets.AddressFamily]::InterNetworkV6, [System.Net.Sockets.SocketType]::Dgram, [System.Net.Sockets.ProtocolType]::Udp)
+    $unicastSocket.Blocking = $false 
+    $unicastSocket.DualMode = $true
+    $unicastSocket.SetSocketOption([System.Net.Sockets.SocketOptionLevel]::Socket, [System.Net.Sockets.SocketOptionName]::ReuseAddress, $true)
+    $unicastSocket.SetSocketOption([System.Net.Sockets.SocketOptionLevel]::IPv6, [System.Net.Sockets.SocketOptionName]::MulticastTimeToLive, 255)
+    $unicastSocket.SetSocketOption([System.Net.Sockets.SocketOptionLevel]::IPv6, [System.Net.Sockets.SocketOptionName]::IPv6Only, $false)
+    $uEP6 = New-Object System.Net.IPEndPoint ($localIP6Addr, $mcastPort) # use same port
+    $unicastSocket.Bind($uEP6)
+
 }else{
 
     # Listen on IPv4 only
@@ -84,6 +95,16 @@ if($ipv6_enabled){
     $mcastOption  = New-Object System.Net.Sockets.MulticastOption $mcast4Addr, $localIP4Addr
     $mcastSocket.SetSocketOption([System.Net.Sockets.SocketOptionLevel]::IP, [System.Net.Sockets.SocketOptionName]::AddMembership, $mcastOption)
     
+
+    $unicastSocket = New-Object System.Net.Sockets.Socket([System.Net.Sockets.AddressFamily]::InterNetworkV6, [System.Net.Sockets.SocketType]::Dgram, [System.Net.Sockets.ProtocolType]::Udp)
+    $unicastSocket.Blocking = $false 
+    $unicastSocket.DualMode = $true
+    $unicastSocket.SetSocketOption([System.Net.Sockets.SocketOptionLevel]::Socket, [System.Net.Sockets.SocketOptionName]::ReuseAddress, $true)
+    $unicastSocket.SetSocketOption([System.Net.Sockets.SocketOptionLevel]::IPv6, [System.Net.Sockets.SocketOptionName]::MulticastTimeToLive, 255)
+    $unicastSocket.SetSocketOption([System.Net.Sockets.SocketOptionLevel]::IPv6, [System.Net.Sockets.SocketOptionName]::IPv6Only, $false)
+    $uEP4 = New-Object System.Net.IPEndPoint ($localIP4Addr, $mcastPort) # use same port
+    $unicastSocket.Bind($uEP4)
+
 }
 
 
@@ -103,9 +124,12 @@ if(-not $ipv6_enabled){
 
 
 $mDNS_Type = @{
-    "A"    = [byte[]](0x00, 0x01);
-    "AAAA" = [byte[]](0x00, 0x1c);
-    "ANY"  = [byte[]](0x00, 0xff);
+    "A"     = [byte[]](0x00, 0x01);
+    "AAAA"  = [byte[]](0x00, 0x1c);
+    "ANY"   = [byte[]](0x00, 0xff);
+    "PTR"   = [byte[]](0x00, 0x0C);
+    "HTTPS" = [byte[]](0x00, 0x41);
+    #...
 }
 
 function Forge($mDNS_ans){
@@ -133,14 +157,13 @@ function Set_IP($ans, [string]$ip, [bool]$IPv6=$false){
     return $ans
 }
 
-
 function Dump($ans){
        
     foreach($key in $ans.Keys){
         if($ans[$key].GetType().Name -ne "String" -and $ans[$key].GetType().Name -ne "UInt32"){
-            Write-Host "$([string]($key).PadRight(14)) : $(($ans[$key]|ForEach-Object ToString X2) -join ' ')"
+            Write-Host -ForegroundColor DarkGray "    $([string]($key).PadRight(14)) : $(($ans[$key]|ForEach-Object ToString X2) -join ' ')"
         }else{
-            Write-Host -ForegroundColor DarkGray "$([string]($key).PadRight(14)) : $($ans[$key])"
+            Write-Host -ForegroundColor White "    $([string]($key).PadRight(14)) : $($ans[$key])"
         }
     }
 }
@@ -198,6 +221,12 @@ function ParseAns([byte[]]$pkt, [bool]$dump, $type="QM"){
         $mDNS_ans.sType = "A"
     }elseif($(Compare-Object -ReferenceObject $btype -DifferenceObject $mDNS_Type.ANY).Count -eq 0){
         $mDNS_ans.sType = "ANY"
+    }elseif($(Compare-Object -ReferenceObject $btype -DifferenceObject $mDNS_Type.PTR).Count -eq 0){
+        $mDNS_ans.sType = "PTR"
+    }elseif($(Compare-Object -ReferenceObject $btype -DifferenceObject $mDNS_Type.PTR).Count -eq 0){
+        $mDNS_ans.sType = "HTTPS"
+    }else{
+        $mDNS_ans.sType = "?"
     }    
 
     $mDNS_ans.Class = $pkt[($offset+3)..($offset+4)]
@@ -210,9 +239,7 @@ function ParseAns([byte[]]$pkt, [bool]$dump, $type="QM"){
 
 }
 
-
-
-function mDNSResponder($ipv4, $ipv6, [switch]$verbose){
+function mDNSResponder($nipv4=$null, $nipv6=$null, [switch]$flush_cache_bit, [switch]$verbose){
 
     $rx_pkt = [byte[]]::new(512)
     
@@ -233,47 +260,75 @@ function mDNSResponder($ipv4, $ipv6, [switch]$verbose){
 
         $rb = $mcastSocket.ReceiveFrom($rx_pkt, [ref]$remoteEP);
 
-        $src = $remoteEP.Address.IPAddressToString
+        $rxDualmode = 0 # IPv4 , 1 = IPv6
         if($remoteEP.Address.IsIPv4MappedToIPv6){
-            $src = $remoteEP.Address.MapToIPv4()
+            $src = $remoteEP.Address.MapToIPv4() 
+            $dst = $mcast4Addr.IPAddressToString       
+        }else{
+            $src = $remoteEP.Address.IPAddressToString
+            $dst = $mcast6Addr.IPAddressToString
+            $rxDualmode = 1
         }
-        
-        $ep = New-Object System.Net.IPEndPoint ($mcast4Addr, $mcastPort)
 
-        if($ipv6_enabled){
-            if($remoteEP.Address.IsIPv4MappedToIPv6){
-                $ep = New-Object System.Net.IPEndPoint ($mcast4Addr, $mcastPort)
+        
+        Write-Host -ForegroundColor Blue $("    [Rx][{0}] {1} byte(s) {2}:{3} ➔ {4}:{5}" -f @($(Get-DAte).ToString('HH:mm:ss'), $rb, $src, $remoteEP.Port, $dst, $mcastPort))
+
+      
+        if($rxDualmode -eq 1){ # IPv6
+
+            #continue; # uncooment to ignore IPv6 SOCKET
+                        
+            if($unicast){
+                $src = $ipv6
+                $ep  = $remoteEP
+                if($remoteEP.Address.IsIPv4MappedToIPv6){
+                    $dst = $remoteEP.Address.MapToIPv4() 
+                }else{
+                    $dst = $remoteEP.Address.IPAddressToString
+                }                
             }else{
+                $src = $mcast6Addr.IPAddressToString 
                 $ep = New-Object System.Net.IPEndPoint ($mcast6Addr, $mcastPort)
+                $dst = $mcast6Addr.IPAddressToString
             }
+
+        }else{ # IPv4
+
+            if($unicast){
+                $src = $ipv4
+                $ep  = $remoteEP
+                if($remoteEP.Address.IsIPv4MappedToIPv6){
+                    $dst = $remoteEP.Address.MapToIPv4() 
+                }else{
+                    $dst = $remoteEP.Address.IPAddressToString
+                }
+            }else{
+                $src = $mcast4Addr.IPAddressToString 
+                $ep = New-Object System.Net.IPEndPoint ($mcast4Addr, $mcastPort)
+                $dst = $mcast4Addr.IPAddressToString
+            }
+
         }
 
-        $grp = $ep.Address.IPAddressToString
-        if($ep.Address.IsIPv4MappedToIPv6){
-            $grp = $ep.Address.MapToIPv4()
-        }
-
-        Write-Host -ForegroundColor Magenta $("Received {0} byte(s) {1}:{2} ➔  {3}:{4}" -f @($rb, $src, $remoteEP.Port, $grp, $ep.Port))
-        
         
         # Ignore packet type AnswerRRS, proced only Question
         if(-not ($rx_pkt[7] -eq 0x01)){
 
             $ans = ParseAns -pkt $rx_pkt -dump $verbose.IsPresent
 
-            $ans.Flags     = [byte[]](0x84, 0x00) # Tell to Flush Cache
+            $ans.Flags     = [byte[]](0x84, 0x00) 
             $ans.Question  = [byte[]](0x00, 0x00)
             $ans.AnswerRRS = [byte[]](0x00, 0x01)
+
 
             if([string]::Equals($ans.sType, "AAAA") -and !$ipv6_enabled){
                 Write-Host -ForegroundColor DarkCyan "Question [AAAA] ignored (no IPv6 addr)"
                 continue;
             }
 
-            Write-Host -ForegroundColor Magenta $("Question [{0}] {1}" -f @($ans.sType, $ans.sAnswerName))
+            Write-Host -ForegroundColor DarkBlue $("    Question [{0}] {1}" -f @($ans.sType, $ans.sAnswerName))
             
-
-            $ttl = [byte[]]@(0x00, 0x00, 0x00, 0x78) # 120 seconds, 2mins
+            $ttl = [byte[]]@(0x00, 0x00, 0x00, 120) # Cache : 0x78 120 seconds, 2mins
             $ans.TTL = $ttl
             [array]::Reverse($ttl);
             $ttl = [bitconverter]::ToUInt32($ttl, 0)
@@ -282,33 +337,61 @@ function mDNSResponder($ipv4, $ipv6, [switch]$verbose){
 
             switch($ans.sType){
                 "A" { 
-                    $ans = Set_IP -ans $ans -ip $ipv4
+                    if($null -ne $nipv4){
+                        $ans = Set_IP -ans $ans -ip $nipv4 # use specified ipv4
+                    }else{
+                        $ans = Set_IP -ans $ans -ip $ipv4 # use interface ipv4
+                    }                    
                     break;
                 }
-                "AAAA" {
-                    $ans = Set_IP -ans $ans -ip $ipv6 -IPv6 $true
+                "AAAA" {                    
+                    if($null -ne $nipv6){
+                        $ans = Set_IP -ans $ans -ip $nipv6 -IPv6 $true # use specified ipv6
+                    }else{
+                        $ans = Set_IP -ans $ans -ip $ipv6 -IPv6 $true # use interface ipv6
+                    }
                     break;
                 }
                 default { break; }
             }
-            
+
+            if(-not @("A", "AAAA").Contains($ans.sType)){
+                Write-Host -ForegroundColor DarkCyan $("    Question [{0}] ignored" -f @($ans.sType))
+                continue; # Ignore all other query types
+            }
+
+            if($flush_cache_bit.IsPresent){
+                $ans.Class = [byte[]](0x80, 0x01) # 0x80,0x01 Tell to Flush Cache, 0x00,0x01 Tell to NOT Flush Cache
+            }
 
             $bAns = Forge -mDNS_ans $ans; 
 
-            do{
+            #if(-not [string]::Equals( $ans.sType, "AAAA")){  # ignore IPv6 QUESTION
 
-                $sb = $mcastSocket.SendTo($bAns, $ep)                
+                do{
 
-                Write-Host -ForegroundColor Blue $("Transmit {0} byte(s) {1}:{2} ➔  {3}:{4}" -f @($sb, $src, $remoteEP.Port, $grp, $ep.Port)) 
-                if($verbose){
-                    Dump -ans $ans       
-                }
+                    if($unicast){
+                        $sb = $unicastSocket.SendTo($bAns, $ep)                 
+                    }else{                    
+                        $sb = $mcastSocket.SendTo($bAns, $ep)                 
+                    }
 
-                Start-Sleep -Milliseconds 5
-            
-            }while($sb -ne $bAns.Length)
+                    Write-Host -ForegroundColor Blue -NoNewline $("    [Tx][{0}] {1} byte(s) {2}:{3} ➔ {4}:{5}" -f @($(Get-DAte).ToString('HH:mm:ss'), $sb, $src, $mcastPort, $dst, $ep.Port))
+                    if($unicast){
+                        Write-Host -ForegroundColor DarkBlue " UNICAST"
+                    }else{
+                        Write-Host -ForegroundColor DarkBlue " MULTICAST"
+                    }
+                    
+                    if($verbose){
+                        Dump -ans $ans       
+                    }
 
-        
+                    Start-Sleep -Milliseconds 5
+                
+                }while($sb -ne $bAns.Length)
+
+            #}        
 
         }else{
             Write-Host -ForegroundColor DarkCyan "AnswerRRS (ignored)"
@@ -316,13 +399,25 @@ function mDNSResponder($ipv4, $ipv6, [switch]$verbose){
         
     }
 }
-
 try{
 
-    # Tell to not use server computer ipv4 address but use specific adress for the response
-    $ipv4 = [System.Net.IPAddress]::Parse("10.0.1.15")
+    $nipv4 = $null
+    $nipv6 = $null
 
-    mDNSResponder -ipv4 $ipv4 -ipv6 $ipv6 -verbose
+    # Tell to not use server computer ipv4 address but use specific adress for the response
+    # Assuming server run on 192.168.0.X , 10.0.15 is another subnetwork
+    # $nipv4 = [System.Net.IPAddress]::Parse("10.0.1.15") 
+    # Windows must --NOT-- ignitiate new TCP connection on port 445 in the case of explorer file access (\\test...)
+    # Maybe more advanced read here : 
+    # https://github.com/csdvrx/PerlPleBean/blob/01623869ba6713229f18b13b046e665c5975c7a8/experiments/bonjour-server.pl#L187
+    # https://kops.uni-konstanz.de/server/api/core/bitstreams/78af6dc3-4891-4413-9044-d5d7077bbdf6/content
+
+    # Assuming server run on 192.168.0.X , 192.168.0.XX is on the same subnetwork but not exists :
+    # $nipv4 = [System.Net.IPAddress]::Parse("192.168.0.XX") 
+    # Windows send ARP 'Who has 192.168.0.XX? Tell 192.168.0.XY' in the case of explorer file access (\\test...)
+    # if ARP response is received Windows should ignitiate new TCP connection to 192.168.0.XX from 192.168.0.XY on port 445.
+
+    mDNSResponder -nipv4 $nipv4 -nipv6 $nipv6 -verbose #-flush_cache_bit
 
 }catch{
     Write-Host -ForegroundColor Red $_
@@ -333,5 +428,5 @@ try{
         $mcastSocket.Dispose()
     }catch{}
 
-    Write-Host -ForegroundColor Green "$([System.Environment]::NewLine)mDNS server stopped !"
+    Write-Host -ForegroundColor Green "$([System.Environment]::NewLine)MDNS RESPONDER STOPPED !"
 }
