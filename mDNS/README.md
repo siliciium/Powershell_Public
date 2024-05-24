@@ -30,9 +30,9 @@ test.local                                     A      120   Answer     XX.X.X.XX
 
 **UTIL**  
 ```
-netsh interface ipv4 show joins
-netsh interface ipv6 show joins
-Resolve-DnsName mdns.mcast.net (IANA reserved) 
+C:\> netsh interface ipv4 show joins
+C:\> netsh interface ipv6 show joins
+PS> Resolve-DnsName mdns.mcast.net (IANA reserved) 
 ```
 
 
