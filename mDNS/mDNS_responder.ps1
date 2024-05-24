@@ -239,7 +239,7 @@ function ParseAns([byte[]]$pkt, [bool]$dump, $type="QM"){
 
 }
 
-function mDNSResponder($nipv4=$null, $nipv6=$null, [switch]$flush_cache_bit, [switch]$verbose){
+function mDNS_responder($nipv4=$null, $nipv6=$null, [switch]$flush_cache_bit, [switch]$verbose){
 
     $rx_pkt = [byte[]]::new(512)
     
@@ -417,7 +417,7 @@ try{
     # Windows send ARP 'Who has 192.168.0.XX? Tell 192.168.0.XY' in the case of explorer file access (\\test...)
     # if ARP response is received Windows should ignitiate new TCP connection to 192.168.0.XX from 192.168.0.XY on port 445.
 
-    mDNSResponder -nipv4 $nipv4 -nipv6 $nipv6 -verbose #-flush_cache_bit
+    mDNS_responder -nipv4 $nipv4 -nipv6 $nipv6 -verbose #-flush_cache_bit
 
 }catch{
     Write-Host -ForegroundColor Red $_
