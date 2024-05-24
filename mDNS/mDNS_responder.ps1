@@ -276,7 +276,7 @@ function mDNSResponder($nipv4=$null, $nipv6=$null, [switch]$flush_cache_bit, [sw
       
         if($rxDualmode -eq 1){ # IPv6
 
-            #continue; # uncooment to ignore IPv6 SOCKET
+            #continue; # uncomment to ignore IPv6 SOCKET
                         
             if($unicast){
                 $src = $ipv6
