@@ -5,3 +5,4 @@ Public powershell code
 - **twitch_oauth.ps1**     : Powershell code for learning how to play with twitch API (https://dev.twitch.tv/docs/authentication).
 - **console-progress-bar** : Simple progress bar.
 - **mDNS**                 : Simple mDNS responder and querier
+- **ROCCAT**               : Class to create ROCCAT Swarm Macro
