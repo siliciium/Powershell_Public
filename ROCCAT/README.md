@@ -1,11 +1,6 @@
 # USAGE EXAMPLE
 ```powershell
 function Main(){
-
-    # TODO : 
-    # - 0x4057, add more mocro in same file...
-    # - Add fake key for more delay 
-
     Clear-Host
 
     try{
