@@ -14,8 +14,8 @@ function Main(){
             throw ("ROCCAT SWARM preset macro path not found ({0})" -f $preset_macro_path)
         }
 
-        $macro_name = "ArcCorp - Hurston2";
-        $macro_desc = "bidirectional Interdiction";      
+        $macro_name = "MyMacroName";
+        $macro_desc = "MyMacroDesc";      
 
         $roccat_macro = [ROCCAT_MACRO]::new()
         # respect strict order !!!
