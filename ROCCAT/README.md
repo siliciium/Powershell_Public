@@ -16,7 +16,7 @@ function Main(){
         # respect strict order !!!
         $actions  = @(
             $roccat_macro.MouseLeftClick(300),
-            $roccat_macro.Delay(65535), # this is the mex delmay you can use (0xffff)
+            $roccat_macro.Delay(65535), # this is the mex delay you can use (0xffff)
             $roccat_macro.KeyPress(100, $roccat_macro.Key_U)
         )
         $fb = $roccat_macro.NewMacro($macro_name, $macro_desc, $actions);
