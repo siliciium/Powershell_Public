@@ -16,7 +16,7 @@ function Main(){
         # respect strict order !!!
         $actions  = @(
             $roccat_macro.MouseLeftClick(300),
-            $roccat_macro.Delay(63199),
+            $roccat_macro.Delay(65535), # this is the mex delmay you can use (0xffff)
             $roccat_macro.KeyPress(100, $roccat_macro.Key_U)
         )
         $fb = $roccat_macro.NewMacro($macro_name, $macro_desc, $actions);
@@ -40,7 +40,7 @@ function Main(){
 
 # KEYBOARD HID KEYS Ref
 <p align="center">
-<table aria-label="Table 2" class="table table-sm margin-top-none">
+<table>
 <thead>
 <tr>
 <th>HID Usage Page Name</th>
