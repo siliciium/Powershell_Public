@@ -1,9 +1,34 @@
-class ROCCAT_MACRO{
+<#
+.SYNOPSIS
+    ROCCAT_MACRO.ps1 – Class to create Roccat Swarm macro
 
-    # TODO : 
-    # - add more keyboard keys ...
-    # - add mouse right click ...
-    # - 0x4057, add more mocros in same file...
+.DESCRIPTION
+    Create Roccat Swarm macro
+
+.AUTHOR
+    Silicium
+    Silicium Corp
+
+.COPYRIGHT
+    © 2026 Silicium. All rights reserved.
+    You must credit the author, not use for commercial purposes, and not modify this script without permission.
+
+.LICENSE
+    CC BY-NC-ND 4.0
+    https://creativecommons.org/licenses/by-nc-nd/4.0/
+.VERSION
+    1.0.0
+
+.LASTUPDATED
+    11/22/2025
+
+.NOTES
+    TODO : 
+    - add more keyboard keys ...
+    - add mouse right click ...
+    - 0x4057, add more mocros in same file...
+#>
+class ROCCAT_MACRO{
 
     $max_name_len      = 0x28; # 0x50/80 unicode, 80/2 for ASCII = 0x28/40 
     $max_desc_len      = 0x20; # (32)
