@@ -10,7 +10,7 @@ function Main(){
             throw ("ROCCAT SWARM preset macro path not found ({0})" -f $preset_macro_path)
         }
 
-        $macro_name = "MyMacroGrp";
+        $group_name = "MyMacroGrp";
 
         $roccat_macro = [ROCCAT_MACRO]::new()
         # respect strict order !!!
@@ -26,17 +26,17 @@ function Main(){
                 $roccat_macro.KeyPress(100, $roccat_macro.Key_I)
             )}            
         )
-        $fb = $roccat_macro.NewMacro($macro_name, $macros);
+        $fb = $roccat_macro.NewMacro($group_name, $macros);
         # $fb | Format-Hex  # <-- uncomment to dump the created file as Hex dump
 
-        $dat_path = "{0}\{1}01.dat" -f $preset_macro_path, $macro_name
+        $dat_path = "{0}\{1}01.dat" -f $preset_macro_path, $group_name
         if([System.IO.File]::Exists($dat_path)){
-            throw ("ROCCAT SWARM macro [{0}] already exists ({1})" -f $macro_name, $dat_path)
+            throw ("ROCCAT SWARM macro [{0}] already exists ({1})" -f $group_name, $dat_path)
         } 
 
         [System.IO.File]::WriteAllBytes($dat_path, $fb)
-        Write-Host -ForegroundColor Green ("Macro [{0}] created ({1})" -f $macro_name, $dat_path)
-        Write-Host -ForegroundColor Green ("`r`nNOW YOU CAN IMPORT MACRO IN ROCCAT SWARM !`r`n" -f $macro_name, $dat_path)
+        Write-Host -ForegroundColor Green ("Macro [{0}] created ({1})" -f $group_name, $dat_path)
+        Write-Host -ForegroundColor Green ("`r`nNOW YOU CAN IMPORT MACRO IN ROCCAT SWARM !`r`n" -f $group_name, $dat_path)
        
         
     }catch{
