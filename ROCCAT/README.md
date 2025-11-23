@@ -11,7 +11,6 @@ function Main(){
         }
 
         $macro_name = "MyMacroGrp";
-        #$macro_desc = "bidirectional Interdiction";      
 
         $roccat_macro = [ROCCAT_MACRO]::new()
         # respect strict order !!!
