@@ -27,7 +27,7 @@ function Main(){
             )}            
         )
         $fb = $roccat_macro.NewMacro($macro_name, $macros);
-        $fb | Format-Hex
+        # $fb | Format-Hex  # <-- uncomment to dump the created file as Hex dump
 
         $dat_path = "{0}\{1}01.dat" -f $preset_macro_path, $macro_name
         if([System.IO.File]::Exists($dat_path)){
