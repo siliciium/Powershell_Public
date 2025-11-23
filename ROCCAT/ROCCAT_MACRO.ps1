@@ -24,10 +24,10 @@
 
 .NOTES
     TODO : 
-    - Add more keyboard keys ...
-    - Add mouse right click ...
-    - 0x4057, add more mocros in same file...
-    - Add fake key for more delay 
+    ❌ Add more keyboard keys ...
+    ❌ Add mouse right click ...
+    ✅ 0x4057, add more mocros in same file...
+    ❌ Add fake key for more delay 
 #>
 class ROCCAT_MACRO{
 
@@ -36,18 +36,27 @@ class ROCCAT_MACRO{
     $max_delay         = 0xffff;  # (65535)
 
     $mouse_left_button = [byte]0xF0;
+    $Key_I             = [byte]0x0C;
     $Key_U             = [byte]0x18;
     $Key_Fin           = [byte]0x4D;
 
     $press             = [byte]0x01;
     $release           = [byte]0x02;
+   
+    $mouse_left_press  = [byte[]](0x00, $this.mouse_left_button, $this.press, 0x00, 0x00);
+    $mouserelease      = [byte[]](0x00, $this.mouse_left_button, $this.release, 0x00, 0x00);
     
-    $mouse_left_press  = [byte[]](0x00, $this.mouse_left_button, $this.press, 0x00, 0x00)
-    $mouserelease      = [byte[]](0x00, $this.mouse_left_button, $this.release, 0x00, 0x00)
+    $signature         = "ROCCAT01";
+    $headersize        = 0x10; # (16)
+    $blocksize         = 0x4057; # (16471)
+
+    $onPress           = 0x00;
+    $macroToggle       = 0x01;
+    $filesize          = 0;
     
-    $signature = "ROCCAT01";
-    
-    ROCCAT_MACRO(){}
+    ROCCAT_MACRO(){
+
+    }
 
     [byte[]]KeyPress($delay, $key){
 
@@ -130,17 +139,25 @@ class ROCCAT_MACRO{
         return $bytes;
     }
 
-    [byte[]]NewMacro($name, $description, $actions){
+    [byte[]]NewMacro($name, $macros){
 
         if($name.Length -gt $this.max_name_len){
             throw ("Macro name max length must be {0} (0x{1:x2})" -f $this.max_name_len, $this.max_name_len)
         }
 
-        if($description.Length -gt $this.max_desc_len){
-            throw ("Macro description max length must be {0} (0x{1:x2})" -f $this.max_desc_len, $this.max_desc_len)
+        foreach($macro in $macros){
+            foreach($m in $macro.GetEnumerator()){
+                if($m.Name.Length -gt $this.max_desc_len){
+                    throw ("Macro description max length must be {0} (0x{1:x2})" -f $this.max_desc_len, $this.max_desc_len)
+                }
+            }
         }
 
-        $f = New-Object byte[] 16575;
+        $this.filesize = ($this.headersize + ([System.Text.Encoding]::Unicode.GetByteCount($name)) + 4 + ($macros.Length * $this.blocksize ) + ($macros.Length * 4))
+        Write-Host -ForegroundColor Blue ([System.Text.Encoding]::Unicode.GetByteCount($name))
+        Write-Host -ForegroundColor Blue $this.filesize
+
+        $f = New-Object byte[] $this.filesize
         $offset = 0
 
         $b = [System.Text.Encoding]::ASCII.GetBytes($this.signature);
@@ -159,47 +176,64 @@ class ROCCAT_MACRO{
         #$b | Format-Hex | Write-Host
         [Array]::Copy($b, 0, $f, $offset, $b.Count);$offset += $b.Count
 
-        $bs = $this.BigEndian([BitConverter]::GetBytes([int32]1))
+
+        $bs = $this.BigEndian([BitConverter]::GetBytes([int32]$macros.Length))
         #$bs | Format-Hex | Write-Host
         [Array]::Copy($bs, 0, $f, $offset, $bs.Count);$offset += $bs.Count
 
-        # This indicate start macro !
-        $bs = [BitConverter]::GetBytes([int32]0x4057)
-        $bs = $this.BigEndian($bs)
-        #$bs | Format-Hex | Write-Host
-        [Array]::Copy($bs, 0, $f, $offset, $bs.Count);$offset += $bs.Count
+        $n = 0;
+        foreach($macro in $macros){
 
-        $b = [byte[]](0x01, 0x00, 0x00, 0x01, 0x00) # <-- 0x01, 0xXX, 0x00, 0x01, 0x00, can be 0x01 ...
-        #$b | Format-Hex | Write-Host
-        [Array]::Copy($b, 0, $f, $offset, $b.Count);$offset += $b.Count
+            $pagestart_offset = $offset
+            Write-Host ("pagestart_offset: {0:x8}" -f $pagestart_offset)
 
-        $b = [System.Text.Encoding]::ASCII.GetBytes($description);  
-        #$b | Format-Hex | Write-Host
-        [Array]::Copy($b, 0, $f, $offset, $b.Count);$offset += $b.Count
+            foreach($m in $macro.GetEnumerator()){                
+                $description = $m.Name
+                
+                # This indicate start macro !
+                $bs = [BitConverter]::GetBytes([int32]$this.blocksize)
+                $bs = $this.BigEndian($bs)
+                #$bs | Format-Hex | Write-Host
+                [Array]::Copy($bs, 0, $f, $offset, $bs.Count);$offset += $bs.Count
 
-        $p = 80-$description.Length        
-        $b = New-Object byte[] $p
-        #$b | Format-Hex | Write-Host
-        [Array]::Copy($b, 0, $f, $offset, $b.Count);$offset += $b.Count
-        
-        $cnt_offset = $offset
-        $cnt = 0 # assume is actions count ?
-        $b = [byte]0        
-        #$b | Format-Hex | Write-Host
-        [Array]::Copy($b, 0, $f, $offset, 1);$offset += 1
+                $b = [byte[]](0x01, $this.onPress, 0x00, 0x01, 0x00) # <-- 0x00 on press, 0x01 = macro_toggle
+                #$b | Format-Hex | Write-Host
+                [Array]::Copy($b, 0, $f, $offset, $b.Count);$offset += $b.Count
 
-        foreach($action in $actions){
-            [Array]::Copy($action, 0, $f, $offset, $action.Count);
-            $offset += $action.Count
+                $b = [System.Text.Encoding]::ASCII.GetBytes($description);  
+                #$b | Format-Hex | Write-Host
+                [Array]::Copy($b, 0, $f, $offset, $b.Count);$offset += $b.Count
 
-            if($action.Count -eq 13){
-                $cnt +=2
+                $p = 80-$description.Length        
+                $b = New-Object byte[] $p
+                #$b | Format-Hex | Write-Host
+                [Array]::Copy($b, 0, $f, $offset, $b.Count);$offset += $b.Count
+                
+                $cnt_offset = $offset
+                $cnt = 0 # assume is actions count ?
+                $b = [byte]0        
+                #$b | Format-Hex | Write-Host
+                [Array]::Copy($b, 0, $f, $offset, 1);$offset += 1
+
+                foreach($val in $m.Value){
+                    [Array]::Copy($val, 0, $f, $offset, $val.Count);
+                    $offset += $val.Count
+
+                    if($val.Count -eq 13){
+                        $cnt +=2
+                    }
+                }
+
+                [Array]::Copy([byte]$cnt, 0, $f, $cnt_offset, 1);
+                               
             }
-        }
 
-        [Array]::Copy([byte]$cnt, 0, $f, $cnt_offset, 1);
+            $offset += ($this.blocksize - ($offset - $pagestart_offset)) + 4
+            $n++;
+        }
 
         return $f
 
     }
 }
+
