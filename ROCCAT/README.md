@@ -10,7 +10,7 @@ function Main(){
             throw ("ROCCAT SWARM preset macro path not found ({0})" -f $preset_macro_path)
         }
 
-        $group_name = "MyMacroGrp";
+        $group_name = "MyMacroGrp"; # <-- if you use an existsing group name, roccat swarm will append your macros into this group
 
         $roccat_macro = [ROCCAT_MACRO]::new()
         # respect strict order !!!
@@ -29,7 +29,7 @@ function Main(){
         $fb = $roccat_macro.NewMacro($group_name, $macros);
         # $fb | Format-Hex  # <-- uncomment to dump the created file as Hex dump
 
-        $dat_path = "{0}\{1}01.dat" -f $preset_macro_path, $group_name
+        $dat_path = "{0}\{1}.dat" -f $preset_macro_path, $group_name
         if([System.IO.File]::Exists($dat_path)){
             throw ("ROCCAT SWARM macro [{0}] already exists ({1})" -f $group_name, $dat_path)
         } 
