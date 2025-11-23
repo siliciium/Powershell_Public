@@ -10,7 +10,7 @@ function Main(){
             throw ("ROCCAT SWARM preset macro path not found ({0})" -f $preset_macro_path)
         }
 
-        $group_name = "MyMacroGrp"; # if you use an existsing group name, roccat swarm will append your macros into this group
+        $group_name = "MyMacroGrp"; # if you use an existing group name, roccat swarm will append your macros into this group
 
         $roccat_macro = [ROCCAT_MACRO]::new()
         # respect strict order !!!
