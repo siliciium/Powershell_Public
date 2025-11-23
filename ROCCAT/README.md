@@ -36,7 +36,7 @@ function Main(){
 
         [System.IO.File]::WriteAllBytes($dat_path, $fb)
         Write-Host -ForegroundColor Green ("Macro [{0}] created ({1})" -f $macro_name, $dat_path)
-        Write-Host -ForegroundColor Green ("`r`nNOW YOU CAN IMPORT THE MACRO IN ROCCAT SWARM !`r`n" -f $macro_name, $dat_path)
+        Write-Host -ForegroundColor Green ("`r`nNOW YOU CAN IMPORT MACRO IN ROCCAT SWARM !`r`n" -f $macro_name, $dat_path)
        
         
     }catch{
