@@ -1,6 +1,7 @@
 # USAGE EXAMPLE
 ```powershell
 function Main(){
+
     Clear-Host
 
     try{
@@ -9,23 +10,30 @@ function Main(){
             throw ("ROCCAT SWARM preset macro path not found ({0})" -f $preset_macro_path)
         }
 
-        $macro_name = "MyMacroName";
-        $macro_desc = "MyMacroDesc";      
+        $macro_name = "MyMacroGrp";
+        #$macro_desc = "bidirectional Interdiction";      
 
         $roccat_macro = [ROCCAT_MACRO]::new()
         # respect strict order !!!
-        $actions  = @(
-            $roccat_macro.MouseLeftClick(300),
-            $roccat_macro.Delay(65535), # this is the mex delay you can use (0xffff)
-            $roccat_macro.KeyPress(100, $roccat_macro.Key_U)
+        $macros  = @(
+            @{ "MyMacro01" = @(
+                $roccat_macro.MouseLeftClick(300),
+                $roccat_macro.Delay(500),
+                $roccat_macro.KeyPress(100, $roccat_macro.Key_U)
+            )};
+            @{ "MyMacro02" = @(
+                $roccat_macro.MouseLeftClick(300),
+                $roccat_macro.Delay(65535), # <-- max delay you can use ! (0xffff)
+                $roccat_macro.KeyPress(100, $roccat_macro.Key_I)
+            )}            
         )
-        $fb = $roccat_macro.NewMacro($macro_name, $macro_desc, $actions);
-        #$fb | Format-Hex
+        $fb = $roccat_macro.NewMacro($macro_name, $macros);
+        $fb | Format-Hex
 
-        $dat_path = "{0}\{1}.dat" -f $preset_macro_path, $macro_name
+        $dat_path = "{0}\{1}01.dat" -f $preset_macro_path, $macro_name
         if([System.IO.File]::Exists($dat_path)){
             throw ("ROCCAT SWARM macro [{0}] already exists ({1})" -f $macro_name, $dat_path)
-        }
+        } 
 
         [System.IO.File]::WriteAllBytes($dat_path, $fb)
         Write-Host -ForegroundColor Green ("Macro [{0}] created ({1})" -f $macro_name, $dat_path)
